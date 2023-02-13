@@ -1,8 +1,8 @@
 ### **PROFESSIONAL EXPERIENCES**
 ___
-- Since 2019 Banque de France, Financial Directorate, Asset Liability Manager
-* 2013-2019 Banque de France, Markets Directorate, Fixed Income Portfolio Manager
-+ 2008-2013 Banque de France, Financial Stability Directorate, Financial Economist
+- Since 2019 $~~~~~~~~~~~$ Banque de France, Financial Directorate, Asset Liability Manager
+* 2013-2019 $~~~~~~~~~~~$ Banque de France, Markets Directorate, Fixed Income Portfolio Manager
++ 2008-2013 $~~~~~~~~~~~$ Banque de France, Financial Stability Directorate, Financial Economist
 
 ### **PUBLICATIONS**
 ---
@@ -14,4 +14,4 @@ Eurosystem’s asset purchase program, Document de Travail Banque de France # 62
 
 ### **TEACHING**
 ***
-2014-today **ESSEC Business School**, Quantitative Portfolio Management in the Master in Finance (FINE 32225)
+2014-today $~~~~~~~~~~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management in the Master in Finance (FINE 32225)
