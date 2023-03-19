@@ -16,7 +16,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 
 ### **TEACHING**
 ***
-2014-today $~~~~~~~~~~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management in the Master in Finance (FINM 32225)**  
+2014-today $~~~~~~~~~~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management in the Master in Finance (FINM 32225)  
 
 - **Portfolio: risk, return and diversification**  
 (https://github.com/WilliamArrata/williamarrata/files/11011441/portfolio_risk_and_diversification_William_Arrata.pdf)
