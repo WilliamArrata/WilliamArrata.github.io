@@ -19,4 +19,4 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 2014-today $~~~~~~~~~~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management in the Master in Finance (FINM 32225)**  
 The mean variance framework**  
 
-[mean_variance_WilliamArrata.pdf](https://github.com/WilliamArrata/williamarrata/files/11011378/Portfolio construction: the mean variance framework.pdf)
+Portfolio construction: the mean variance framework (https://github.com/WilliamArrata/williamarrata/files/11011382/mean_variance_WilliamArrata.pdf)
