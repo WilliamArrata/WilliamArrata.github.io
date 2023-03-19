@@ -22,7 +22,8 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 (https://github.com/WilliamArrata/williamarrata/files/11011441/portfolio_risk_and_diversification_William_Arrata.pdf)
 
 - **Portfolio construction: the mean variance framework**  
-(https://github.com/WilliamArrata/williamarrata/files/11011382/mean_variance_WilliamArrata.pdf)
+(https://github.com/WilliamArrata/williamarrata/files/11012369/mean_variance_WilliamArrata.pdf)
+
 
 - **The Capital Asset Pricing Model**  
 (https://github.com/WilliamArrata/williamarrata/files/11011442/CAPM_WilliamArrata.pdf)
