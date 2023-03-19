@@ -17,6 +17,17 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 ### **TEACHING**
 ***
 2014-today $~~~~~~~~~~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management in the Master in Finance (FINM 32225)**  
-The mean variance framework**  
+
+Portfolio: risk, return and diversification (https://github.com/WilliamArrata/williamarrata/files/11011441/portfolio_risk_and_diversification_William_Arrata.pdf)
 
 Portfolio construction: the mean variance framework (https://github.com/WilliamArrata/williamarrata/files/11011382/mean_variance_WilliamArrata.pdf)
+
+The Capital Asset Pricing Model (https://github.com/WilliamArrata/williamarrata/files/11011442/CAPM_WilliamArrata.pdf)
+
+Implementation of the Markowitz framework: resampling, shrinkage, and the Black Litterman Model (https://github.com/WilliamArrata/williamarrata/files/11011444/Black_Litterman_WilliamArrata_2.pdf)
+
+Portfolio insurance techniques (https://github.com/WilliamArrata/williamarrata/files/11011445/CPPI_WilliamArrata.pdf)
+
+Exchange-Traded Funds (https://github.com/WilliamArrata/williamarrata/files/11011446/ETF_structuration.pdf)
+
+
