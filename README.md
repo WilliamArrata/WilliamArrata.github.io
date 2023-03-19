@@ -15,3 +15,4 @@ Eurosystem’s asset purchase program, Document de Travail Banque de France # 62
 ### **TEACHING**
 ***
 2014-today $~~~~~~~~~~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management in the Master in Finance (FINM 32225)
+[CAPM_WilliamArrata.pdf](https://github.com/WilliamArrata/williamarrata/files/11011311/CAPM_WilliamArrata.pdf)
