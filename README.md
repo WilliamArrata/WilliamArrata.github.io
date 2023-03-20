@@ -37,3 +37,4 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 (https://github.com/WilliamArrata/williamarrata/files/11011446/ETF_structuration.pdf)
 
 
+![This is an image](https://myoctocat.com/assets/images/base-octocat.svg)
