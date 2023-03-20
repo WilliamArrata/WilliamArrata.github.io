@@ -7,7 +7,7 @@ ___
 ### **PUBLICATIONS**
 ---
 
-- William Arrata et al (2020), **The scarcity effect of QE on repo rates: Evidence from the euro area,
+- William Arrata, Benoit Nguyen, Imène Rahmouni-Rousseau, Miklos Vari (2020), **The scarcity effect of QE on repo rates: Evidence from the euro area,
 Journal of Financial Economics, Volume 137, Issue 3, Sept 2020**  
 https://www.sciencedirect.com/science/article/abs/pii/S0304405X20301240?via%3Dihub
 * William Arrata, Benoit Nguyen (2017), **Price Impact of bond supply shocks: Evidence from the
@@ -16,7 +16,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 
 ### **TEACHING**
 ***
-2014-today $~~~~~~~~~~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management in the Master in Finance (FINM 32225)  
+2014-today $~~~~~~~~~~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management course in the Master in Finance (FINM 32225)  
 
 - **Portfolio: risk, return and diversification**  
 (https://github.com/WilliamArrata/williamarrata/files/11011441/portfolio_risk_and_diversification_William_Arrata.pdf)
