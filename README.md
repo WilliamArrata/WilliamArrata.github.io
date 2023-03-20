@@ -31,14 +31,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 (https://github.com/WilliamArrata/williamarrata/files/11011444/Black_Litterman_WilliamArrata_2.pdf)
 
 - **Portfolio insurance techniques**  
-(https://github.com/WilliamArrata/williamarrata/files/11011445/CPPI_WilliamArrata.pdf)
+![CPPI_WilliamArrata.pdf](https://github.com/WilliamArrata/williamarrata/files/11021021/CPPI_WilliamArrata.pdf)
 
 - **Exchange-Traded Funds**  
 (https://github.com/WilliamArrata/williamarrata/files/11011446/ETF_structuration.pdf)
-
-- **Exchange-Traded Funds**  
-![CPPI_WilliamArrata.pdf](https://github.com/WilliamArrata/williamarrata/files/11021021/CPPI_WilliamArrata.pdf)
-
-
-
-![This is an image](https://myoctocat.com/assets/images/base-octocat.svg)
