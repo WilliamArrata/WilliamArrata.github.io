@@ -30,7 +30,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 - **Implementation of the Markowitz framework: resampling, shrinkage, and the Black Litterman Model** 
 (https://github.com/WilliamArrata/williamarrata/files/11011444/Black_Litterman_WilliamArrata_2.pdf)
 
-- **Portfolio insurance techniques** 
+- **Portfolio insurance techniques**  
 (https://github.com/WilliamArrata/williamarrata/files/11011445/CPPI_WilliamArrata.pdf)
 
 - **Exchange-Traded Funds**  
