@@ -19,19 +19,19 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 2014-today $~~~~~~~~~~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management course in the Master in Finance (FINM 32225)  
 
 - **Portfolio: risk, return and diversification**  
-(https://github.com/WilliamArrata/williamarrata/files/11011441/portfolio_risk_and_diversification_William_Arrata.pdf)
+![portfolio_risk_and_diversification_William_Arrata.pdf](https://github.com/WilliamArrata/williamarrata/files/11021043/portfolio_risk_and_diversification_William_Arrata.pdf)
 
 - **Portfolio construction: the mean variance framework**  
-(https://github.com/WilliamArrata/williamarrata/files/11020800/mean_variance_WilliamArrata.pdf)
+![mean_variance_WilliamArrata.pdf](https://github.com/WilliamArrata/williamarrata/files/11021066/mean_variance_WilliamArrata.pdf)
 
 - **The Capital Asset Pricing Model**  
-(https://github.com/WilliamArrata/williamarrata/files/11011442/CAPM_WilliamArrata.pdf)
+![CAPM_WilliamArrata.pdf](https://github.com/WilliamArrata/williamarrata/files/11021075/CAPM_WilliamArrata.pdf)
 
-- **Implementation of the Markowitz framework: resampling, shrinkage, and the Black Litterman Model** 
-(https://github.com/WilliamArrata/williamarrata/files/11011444/Black_Litterman_WilliamArrata_2.pdf)
+- **Implementation of the Markowitz framework: resampling, shrinkage, and the Black Litterman Model**  
+![Black_Litterman_WilliamArrata_2.pdf](https://github.com/WilliamArrata/williamarrata/files/11021091/Black_Litterman_WilliamArrata_2.pdf)
 
 - **Portfolio insurance techniques**  
 ![CPPI_WilliamArrata.pdf](https://github.com/WilliamArrata/williamarrata/files/11021021/CPPI_WilliamArrata.pdf)
 
 - **Exchange-Traded Funds**  
-(https://github.com/WilliamArrata/williamarrata/files/11011446/ETF_structuration.pdf)
+![ETF_structuration.pdf](https://github.com/WilliamArrata/williamarrata/files/11021109/ETF_structuration.pdf)
