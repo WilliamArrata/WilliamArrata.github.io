@@ -22,7 +22,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 (https://github.com/WilliamArrata/williamarrata/files/11011441/portfolio_risk_and_diversification_William_Arrata.pdf)
 
 - **Portfolio construction: the mean variance framework**  
-(https://github.com/WilliamArrata/williamarrata/files/11011382/mean_variance_WilliamArrata.pdf)
+(https://github.com/WilliamArrata/williamarrata/files/11020800/mean_variance_WilliamArrata.pdf)
 
 - **The Capital Asset Pricing Model**  
 (https://github.com/WilliamArrata/williamarrata/files/11011442/CAPM_WilliamArrata.pdf)
@@ -30,7 +30,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 - **Implementation of the Markowitz framework: resampling, shrinkage, and the Black Litterman Model** 
 (https://github.com/WilliamArrata/williamarrata/files/11011444/Black_Litterman_WilliamArrata_2.pdf)
 
-- **Portfolio insurance techniques** 
+- **Portfolio insurance techniques**  
 (https://github.com/WilliamArrata/williamarrata/files/11011445/CPPI_WilliamArrata.pdf)
 
 - **Exchange-Traded Funds**  
