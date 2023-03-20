@@ -36,5 +36,9 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 - **Exchange-Traded Funds**  
 (https://github.com/WilliamArrata/williamarrata/files/11011446/ETF_structuration.pdf)
 
+- **Exchange-Traded Funds**  
+![CPPI_WilliamArrata.pdf](https://github.com/WilliamArrata/williamarrata/files/11021021/CPPI_WilliamArrata.pdf)
+
+
 
 ![This is an image](https://myoctocat.com/assets/images/base-octocat.svg)
