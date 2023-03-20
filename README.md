@@ -19,7 +19,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 ***
 - 2014-today $~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management course in the Master in Finance (FINM 32225)  
 
-| **Subject** | **Slides** | **Code**| **Data**|
+| **SUBJECT** | **SLIDES** | **CODE**| **DATA**|
 | :---        |     :---:      | :---:  |  :---:  |
 | **Portfolio: risk, return and diversification**   | ![risk_diversification.pdf](https://github.com/WilliamArrata/williamarrata/files/11021445/risk_diversification.pdf)   | to come  | to come
 | **Portfolio construction: the mean variance framework**     | ![mean_variance.pdf](https://github.com/WilliamArrata/williamarrata/files/11021449/mean_variance.pdf)|     to come  | to come
