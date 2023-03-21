@@ -1,6 +1,6 @@
 #### Welcome to my website! I am an Asset Liability Manager in the Financial Directorate of Banque de France. Previously, I held positions such as Fixed Income portfolio manager in their Reserves Management Division, implementation of the Public Sector Purchase Program (PSPP) of the ECB, and policy economist. I teach Quantitative Portfolio Management in the Master in Finance of ESSEC Business School in Paris. I have also coauthored academic research on the quantitative assessment of unconventional monetary policies in the euro area. I hold a Master Degree in Actuarial Science from ISUP (Sorbonne Université), an MRes in financial economics from Université Paris I Panthéon Sorbonne and a Master in Science from HEC Paris. I am a CFA Charterholder and an associate Actuary.
 
-*Papers and presentation materials made available on this website reflect my sole opinions and those of my coauthors, and do not express the views of my institution.*
+*Papers and presentations on this website reflect my sole opinions and those of my coauthors, and do not express the viewso f my institution*
 
 ### **PROFESSIONAL EXPERIENCES**
 ___
