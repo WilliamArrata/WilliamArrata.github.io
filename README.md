@@ -24,8 +24,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Portfolio: risk, return and diversification**   | ![risk_diversification.pdf](https://github.com/WilliamArrata/williamarrata/files/11021445/risk_diversification.pdf)   | to come  | to come
 | **Portfolio construction: the mean variance framework**     | ![mean_variance.pdf](https://github.com/WilliamArrata/williamarrata/files/11021449/mean_variance.pdf)|     to come  | to come
 | **The Capital Asset Pricing Model**     | ![CAPM.pdf](https://github.com/WilliamArrata/williamarrata/files/11021451/CAPM.pdf)|  to come  | to come
-| **Implementation of the Markowitz framework: resampling, shrinkage, and the Black Litterman Model**     | ![Black_Litterman.pdf](https://github.com/WilliamArrata/williamarrata/files/11026440/Black_Litterman.pdf)
-    | to come  | to come
+| **Implementation of the Markowitz framework: resampling, shrinkage, and the Black Litterman Model**     | ![Black_Litterman.pdf](https://github.com/WilliamArrata/williamarrata/files/11026440/Black_Litterman.pdf) | to come  | to come
 | **Index linked portfolio management**     | to come  | to come  | to come
 | **Portfolio insurance techniques**     | ![CPPI.pdf](https://github.com/WilliamArrata/williamarrata/files/11021453/CPPI.pdf)  | to come  | to come
 | **Exchange-Traded Funds**     | ![ETF_structuration.pdf](https://github.com/WilliamArrata/williamarrata/files/11021109/ETF_structuration.pdf)  | to come  | to come
