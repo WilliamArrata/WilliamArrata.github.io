@@ -19,7 +19,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 
 ### **TEACHING**
 ***
-- 2014-today $~~~~~~~~~~$ **ESSEC Business School**, Quantitative Portfolio Management course in the Master in Finance (FINM 32225)  
+- 2014-today $~~~~~~~~~~$ **ESSEC Business School**, **Master in Finance**, Quantitative Portfolio Management (FINM 32225)  
 
 | **TOPIC** | **SLIDES** | **CODE**| **DATA**|
 | :---        |     :---:      | :---:  |  :---:  |
