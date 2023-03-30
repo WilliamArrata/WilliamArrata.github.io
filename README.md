@@ -6,7 +6,7 @@
 ___
 - Since 2019 $~~~~~~~~~~~$ Banque de France, Financial Directorate, Asset Liability Manager
 - 2013-2019 $~~~~~~~~~~~$ Banque de France, Markets Directorate, Fixed Income Portfolio Manager
-- 2008-2013 $~~~~~~~~~~~$ Banque de France, Financial Stability Directorate, Financial Economist
+- 2008-2013 $~~~~~~~~~~~$ Banque de France, Financial Stability Directorate, Policy Economist
 
 ### **PUBLICATIONS**
 ---
