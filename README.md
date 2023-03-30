@@ -23,7 +23,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 
 | **TOPIC** | **SLIDES** | **CODE**| **DATA**|
 | :---        |     :---:      | :---:  |  :---:  |
-| **Portfolio: risk, return and diversification**   | ![risk_diversification.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11037377/risk_diversification.pdf)   | to come | to come
+| **Portfolio: risk, return and diversification**   | [risk_diversification.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11037377/risk_diversification.pdf)   | to come | to come
 | **Portfolio construction: the mean variance framework**     | ![mean_variance.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11037380/mean_variance.pdf)|     to come  | to come
 | **The Capital Asset Pricing Model**     | ![CAPM.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11037383/CAPM.pdf)|  to come  | to come
 | **Implementation of the Markowitz framework: resampling, shrinkage, and the Black Litterman Model**     | ![Black_Litterman.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11037385/Black_Litterman.pdf) | to come  | to come
