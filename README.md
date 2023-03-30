@@ -29,4 +29,5 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Implementation of the Markowitz framework: resampling, shrinkage, and the Black Litterman Model**     | [Black_Litterman.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11037385/Black_Litterman.pdf) | to come  | to come
 | **Index linked portfolio management**     | [Index-linked_management.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11114007/Index-linked_management.pdf)| to come  | to come
 | **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11037386/CPPI.pdf)  | to come  | to come
-| **Exchange-Traded Funds**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/williamarrata/files/11021109/ETF_structuration.pdf)  | to come  | to come
+| **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/williamarrata/files/11021109/ETF_structuration.pdf)  | to come  | to come
+| **Exchange-Traded Funds part 2**     | to come  | to come  | to come
