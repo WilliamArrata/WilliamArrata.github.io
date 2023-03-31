@@ -31,3 +31,6 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11037386/CPPI.pdf)  | to come  | to come
 | **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/williamarrata/files/11021109/ETF_structuration.pdf)  | to come  | to come
 | **Exchange-Traded Funds part 2**     | to come  | to come  | to come
+
+
+|Something|Something else \\ that's rather long|Something else|
