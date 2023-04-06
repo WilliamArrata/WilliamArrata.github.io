@@ -30,4 +30,4 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Index linked portfolio management**     | [Index-linked2.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141826/Index-linked2.pdf)| to come  | to come | to come
 | **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141833/CPPI.pdf)  | to come  | to come | to come
 | **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  | to come  | to come | to come
-| **Exchange-Traded Funds part 2**     | to come  | to come  | to come | to come
+| **Exchange-Traded Funds part 2**     | [ETF_ trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11172226/ETF_.trading.pdf)  | to come  | to come | to come
