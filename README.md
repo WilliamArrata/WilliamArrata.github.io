@@ -27,7 +27,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Portfolio construction: the mean variance framework**     | [mean_variance.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141813/mean_variance.pdf)|  to come  | to come | to come
 | **The Capital Asset Pricing Model**     | [CAPM.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141818/CAPM.pdf)|  to come  | to come | to come
 | **Implementation of the Markowitz framework:** <br /> **resampling, shrinkage, and the Black Litterman Model**     | [Black_Litterman.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141821/Black_Litterman.pdf) | to come  | to come | to come
-| **Index linked portfolio management**     | [Index-linked2.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141826/Index-linked2.pdf)| to come  | to come | to come
+| **Index linked portfolio management**     | [Index-linked.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11184035/Index-linked.pdf)| to come  | to come | to come
 | **Benchmark & Performance Attribution**  | [Benchmarks_performance_attribution.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11184029/Benchmarks_performance_attribution.pdf)  | to come  | to come | to come
 | **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141833/CPPI.pdf)  | to come  | to come | to come
 | **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  | to come  | to come | to come
