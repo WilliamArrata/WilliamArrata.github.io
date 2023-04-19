@@ -32,3 +32,11 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141833/CPPI.pdf)  | to come  | to come | to come
 | **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  | to come  | to come | to come
 | **Exchange-Traded Funds part 2**     | [ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11172243/ETF_trading.pdf)| to come  | to come | to come
+
+### **OTHER TOPICS IN QUANTITATIVE FINANCE**
+***
+
+| **TOPIC** | **SLIDES** | **CODE**|
+| :---        |     :---:      | :---:  |
+| **Calibration of Risk Neutral Densities**   | [RND.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11277398/RND.pdf)
+ | to come |
