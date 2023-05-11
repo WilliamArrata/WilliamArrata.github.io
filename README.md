@@ -1,4 +1,4 @@
-#### Welcome to my website! I am an Asset Liability Manager in the Financial Directorate of Banque de France. Previously, I held positions such as Fixed Income portfolio manager in their Reserves Management Division, implementation of the Public Sector Purchase Program (PSPP) of the ECB, and policy economist. I teach Quantitative Portfolio Management in the Master in Finance of ESSEC Business School in Paris. I have also coauthored academic research on the quantitative assessment of unconventional monetary policies in the euro area. I hold a Master Degree in Actuarial Science from ISUP (Sorbonne Université), an MRes in financial economics from Université Paris I Panthéon Sorbonne and a Master in Science from HEC Paris. I am a CFA Charterholder and an associate Actuary.
+#### Welcome to my website! I am an Asset Liability Manager in the Financial Directorate of Banque de France. Previously, I held positions such as Fixed Income portfolio manager in their Reserves Management Division, implementation of the Public Sector Purchase Program (PSPP) of the ECB, and policy economist. I teach Quantitative Portfolio Management in the Master in Finance of ESSEC Business School in Paris. I have also coauthored academic research on the quantitative assessment of unconventional monetary policies in the euro area. I hold a Master Degree in Actuarial Science from ISUP (Sorbonne Université), an MRes in financial economics from Université Paris I Panthéon Sorbonne and a MsC in Management from HEC Paris. I am a CFA Charterholder and an associate Actuary.
 
 *Papers and presentations on this website reflect my sole opinions and those of my coauthors, and do not express the views of my institution*
 
@@ -31,8 +31,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Benchmark & Performance Attribution**  | [Benchmarks_performance_attribution.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11184029/Benchmarks_performance_attribution.pdf)  | to come  | to come | to come
 | **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141833/CPPI.pdf)  | to come  | to come | to come
 | **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  | to come  | to come | to come
-| **Exchange-Traded Funds part 2**     | [ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11451352/ETF_trading.pdf)| to come  | to come | to come
-
+| **Exchange-Traded Funds part 2**     |[ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11454048/ETF_trading.pdf)| to come  | to come | to come
 
 ### **OTHER TOPICS IN QUANTITATIVE FINANCE**
 ***
