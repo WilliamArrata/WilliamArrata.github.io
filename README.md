@@ -31,7 +31,8 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Benchmark & Performance Attribution**  | [Benchmarks_performance_attribution.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11184029/Benchmarks_performance_attribution.pdf)  | to come  | to come | to come
 | **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141833/CPPI.pdf)  | to come  | to come | to come
 | **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  | to come  | to come | to come
-| **Exchange-Traded Funds part 2**     | [ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11450517/ETF_trading.pdf)| to come  | to come | to come
+| **Exchange-Traded Funds part 2**     | [ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11451352/ETF_trading.pdf)| to come  | to come | to come
+
 
 ### **OTHER TOPICS IN QUANTITATIVE FINANCE**
 ***
