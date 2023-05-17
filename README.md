@@ -30,8 +30,8 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Index linked portfolio management**     | [Index-linked.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11184035/Index-linked.pdf)| to come  | to come | 
 | **Benchmark & Performance Attribution**  | [Benchmarks_performance_attribution.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11184029/Benchmarks_performance_attribution.pdf)  | to come  | to come | [FINM31261_exercises_13.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11501697/FINM31261_exercises_13.pdf)
 | **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141833/CPPI.pdf)  | to come  | to come | [FINM31261_exercises_14.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11501714/FINM31261_exercises_14.pdf)
-| **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  | to come  |  | 
-| **Exchange-Traded Funds part 2**     |[ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11454048/ETF_trading.pdf)| to come  | to come | |
+| **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  |  |  | 
+| **Exchange-Traded Funds part 2**     |[ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11454048/ETF_trading.pdf)|  | | |
 
 ### **OTHER TOPICS IN QUANTITATIVE FINANCE**
 ***
