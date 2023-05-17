@@ -24,12 +24,12 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **TOPIC** | **SLIDES** | **CODE**| **DATA**| **EXERCISES**|
 | :---        |     :---:      | :---:  |  :---:  | :---:  |
 | **Portfolio: risk, return and diversification**   | [risk_diversification.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141812/risk_diversification.pdf) | to come | to come | to come
-| **Portfolio construction: the mean variance framework**     | [mean_variance.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141813/mean_variance.pdf)|  to come  | to come | to come
-| **The Capital Asset Pricing Model**     | [CAPM.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141818/CAPM.pdf)|  to come  | to come | to come
-| **Implementation of the Markowitz framework:** <br /> **resampling, shrinkage, and the Black Litterman Model**     | [Black_Litterman.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141821/Black_Litterman.pdf) | to come  | to come | to come
+| **Portfolio construction: the mean variance framework**     | [mean_variance.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141813/mean_variance.pdf)|  to come  | to come |[FINM32225_exercises_1_to_7.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11501681/FINM32225_exercises_1_to_7.pdf)
+| **The Capital Asset Pricing Model**     | [CAPM.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141818/CAPM.pdf)|  to come  | to come | [FINM31261_exercises_8_to_10.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11501690/FINM31261_exercises_8_to_10.pdf)
+| **Implementation of the Markowitz framework:** <br /> **resampling, shrinkage, and the Black Litterman Model**     | [Black_Litterman.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141821/Black_Litterman.pdf) | to come  | to come | [FINM31261_exercises_11_12.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11501695/FINM31261_exercises_11_12.pdf)
 | **Index linked portfolio management**     | [Index-linked.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11184035/Index-linked.pdf)| to come  | to come | to come
-| **Benchmark & Performance Attribution**  | [Benchmarks_performance_attribution.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11184029/Benchmarks_performance_attribution.pdf)  | to come  | to come | to come
-| **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141833/CPPI.pdf)  | to come  | to come | to come
+| **Benchmark & Performance Attribution**  | [Benchmarks_performance_attribution.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11184029/Benchmarks_performance_attribution.pdf)  | to come  | to come | [FINM31261_exercises_13.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11501697/FINM31261_exercises_13.pdf)
+| **Portfolio insurance techniques**     | [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141833/CPPI.pdf)  | to come  | to come | [FINM31261_exercises_14.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11501714/FINM31261_exercises_14.pdf)
 | **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  | to come  | to come | to come
 | **Exchange-Traded Funds part 2**     |[ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11454048/ETF_trading.pdf)| to come  | to come | to come
 
