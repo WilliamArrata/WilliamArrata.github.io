@@ -18,7 +18,7 @@ for (i in seq_along(rho)){
 xlim<-range(do.call(rbind,pair)[,1])*1.1
 ylim<-range(do.call(rbind,pair)[,2])*c(0.8,1.1)
 colv<-c(rainbow(3),"black")
-lty<-c(rep(1,3),2)
+lty<-rep(1:2,c(3,1))
 
 par(mar=c(6, 4, 4, 3),xpd=T)
 plot(pair[[1]][c(1,length(mean)),], las=1,xlab="", ylab="",xlim=xlim, ylim=ylim,pch=20,lty=3)
