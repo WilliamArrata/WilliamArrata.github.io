@@ -12,8 +12,8 @@ ret<-apply(donnees[,-1],2,diff)/donnees[-1,-1]                     #daily histor
 moy<-252*matrix(colMeans(ret))                                     #annualized expected returns
 cov_mat<-252*as.matrix(cov(ret))                                   #annualized covariances
 
-w<-seq(from=0,to=1,by=0.1)                                         #Create sets of weights for the 6 assets
-w<-expand.grid(rep(list(w), length(moy)))
+w<-seq(from=0,to=1,by=0.1)                                         #Create sets of positive weights
+w<-expand.grid(rep(list(w), length(moy)))                          #Short selling not allowed
 w<-as.matrix(w[rowSums(w)==1,])
 returns<-rowSums(w%*%moy)                                          #Portfolios' return
 risk<-diag(sqrt(w%*%cov_mat%*%t(w)))                               #Portfolios' risk
