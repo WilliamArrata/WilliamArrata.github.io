@@ -10,10 +10,10 @@ pacman::p_load("readxl","ggplot2","tibble")
 donnees<-as.data.frame(read_excel("stock_prices.xlsx",1))          #load stock prices
 ret<-apply(donnees[,-1],2,diff)/donnees[-1,-1]                     #daily historical returns
 moy<-252*matrix(colMeans(ret))                                     #annualized expected returns
-cov_mat<-252*as.matrix(cov(ret))                                   #annualized covariances
+cov_mat<-252*cov(ret)                                              #annualized covariances
 
 w<-seq(from=0,to=1,by=0.1)                                         #Create sets of positive weights
-w<-expand.grid(rep(list(w), length(moy)))                          #Short selling not allowed
+w<-expand.grid(rep(list(w),length(moy)))                           #Short selling not allowed
 w<-as.matrix(w[rowSums(w)==1,])
 returns<-rowSums(w%*%moy)                                          #Portfolios' return
 risk<-diag(sqrt(w%*%cov_mat%*%t(w)))                               #Portfolios' risk
