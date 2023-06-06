@@ -181,7 +181,7 @@ low<-which.min(ptfs$vol)                                             #variance m
 high<-which.max(ptfs$return)                                         #expected return max
 effi<-ptfs[low:high,]                                                #coordonnées de chaque pf sur l'EF
 
-#Graph minimum variance frontier, efficient frontier and low
+#Graph minimum variance frontier and efficient frontier
 par(mar=c(7,5,4,3),xpd=T)
 plot(ptfs$vol[c(low,high)],ptfs$return[c(low,high)],las=1,xlab="standard deviation (%)", ylab="expected return",
      ylim=1.3*range(ptfs$return),xlim=c(0.8,1.3)*range(ptfs$vol),col="lightblue", pch=19)
@@ -235,7 +235,7 @@ par(mar=c(7,5,4,3),xpd=T)
 plot(ptfs$vol[low],ptfs$return[low],las=1, xlab="standard deviation", ylab="expected return",
      ylim=1.2*range(c(ptfs_no_s$return,ptfs$return)), xlim=c(0.8,1.1)*range(c(ptfs$vol,ptfs_no_s$vol)),
      col=col_no[2], pch=19)
-lines(ptfs_no_s$vol[GMVP_no_s],ptfs_no_s$return[GMVP_no_s], col=col_no[4])
+lines(ptfs_no_s$vol[low_no_s],ptfs_no_s$return[low_no_s], col=col_no[4])
 lines(ptfs$vol,ptfs$return,col=col_no[1],pch=20)
 lines(effi$vol,effi$return,col=col_no[2],lwd=2.0)
 lines(ptfs_no_s$vol,ptfs_no_s$return,col=col_no[3],pch=20)
@@ -246,9 +246,11 @@ legend("bottom",horiz=T,inset = c(0,-0.35),text.col=col_no,col=col_no,lty=1, bty
 #3. Efficient frontier when individual asset weights are capped at 25%
 
 wmax<-0.25
+
 ptfs_25<-EF(returns=returns,nports=nports,shorts=shorts,wmax=wmax)
-GMVP_25<-which.min(ptfs_25$vol)
-effi_25<-ptfs_25[GMVP_25:nrow(ptfs_25),]
+low_25<-which.min(ptfs_25$vol)
+high_25<-which.max(ptfs_25$return)
+effi_25<-ptfs_25[low_25:high_25,]
 
 #Graph efficient frontiers short selling allowed, no short selling and weights capped at 25%
 col_f<-c("darkgrey","darkblue","indianred")
