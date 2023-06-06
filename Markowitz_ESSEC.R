@@ -7,7 +7,6 @@ pacman::p_load("tseries","readxl")
 #####################   DATA DOWNLOAD AND COMPUTATION OF EXPECTED RETURNS AND COVARIANCES   ################
 
 #I load the data
-setwd("Z://1_Service/1.2_Agents_Service/William/Enseignement/Mon cours 2022/mean variance")
 data<-as.data.frame(read_excel("stock_prices.xlsx",1))          #load stock prices
 data<-apply(data,2,as.numeric)                                  #conversion in numeric
 returns<-apply(data[,-1],2,diff)/data[-1,-1]                    #daily historical returns
@@ -19,13 +18,9 @@ sig<-252*cov(returns)                                           #annualized cova
 
 #1. short selling allowed
 
-#do not put annualized returns into the optimizer as will compute cov matrix based on them
-#unless cov matrix is also provided. however, same weights whether annualized or not
-
 #Global Minimum Variance Portfolio
-gmvp<-portfolio.optim(returns, shorts=T)   #GMVP, if no target is given to the optimizer, only risk minimized
-print(c(gmvp$pw,252*gmvp$pm,sqrt(252)*gmvp$ps))           #annualized expected return and stddev, weights
-print(c(sum(gmvp$pw*mean),sqrt(gmvp$pw%*%sig%*%gmvp$pw))) #check
+gmvp<-portfolio.optim(returns, shorts=T)   #If no target is given to the optimizer, only risk minimized
+print(c(gmvp$pw,252*gmvp$pm,sqrt(252)*gmvp$ps))     #annualized expected return and stddev, weights
 
 par(mar=c(8,4,4,4) + 0.1)
 cex<-0.8
