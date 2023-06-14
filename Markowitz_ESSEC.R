@@ -194,7 +194,7 @@ lines(ptfs$vol,ptfs$return,col="indianred",pch=20)
 legend("bottom",horiz=T,inset = c(0,-0.35),legend=c("Minimum variance frontier","Efficient frontier"),
        text.col=c("indianred","lightblue"),col=c("indianred","lightblue"), bty="n", lty=1)
 
-#Graph minimum variance frontier and efficient frontier with ggplot2
+#Graph minimum variance frontier and efficient frontier (with ggplot2)
 ggplot(100*ptfs,aes(vol,return))+geom_point(aes(color="Minimum Variance Frontier"))+
   geom_line(data=100*effi,aes(color="Efficient frontier"), size=1) +
   labs(x="standard deviation (%)", y="expected return (%)", color="")+
