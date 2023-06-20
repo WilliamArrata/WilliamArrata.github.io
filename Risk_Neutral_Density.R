@@ -17,7 +17,7 @@ terms<-as.numeric(gsub('[^0-9.-]','',word(matu,2)))/365
 mat<-c(mat,nrow(options))                                     #add one last term to mat for the loop
 
 #2. Futures prices for each option maturity
-fut<-do.call(rbind,strsplit(word(options$`call strike`[nchar(options$`call strike`)>20],-2,-1)," "))
+fut<-as.data.frame(do.call(rbind,strsplit(word(options$`call strike`[nchar(options$`call strike`)>20],-2,-1)," ")))
 fut[,2]<-as.numeric(fut[,2])
 
 #3. Generic rates
@@ -29,7 +29,7 @@ rates<-rates[!is.na(rates$Yield),]
 rates_n<-list()
 for (i in 1:length(terms)){
   rates_n[[i]]<-approxExtrap(rates$term, rates$Yield, xout=terms[i], method = "linear",
-                            n = 50, rule = 2, f = 0, ties = "ordered", na.rm = FALSE)$y}
+                             n = 50, rule = 2, f = 0, ties = "ordered", na.rm = FALSE)$y}
 rates_n<-unlist(rates_n)/100
 
 #graph option prices for the most remote maturity
@@ -48,14 +48,16 @@ lines(graph[,c(1,3)], col=col[2])
 title(xlab="strike price (EUR)",adj=1)
 legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.2),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
+
 ###############################  CALIBRATION OF PARAMETERS  ##########################################
 
 #European call price, put price, and expected spot price for a sum of 2 lognormals
+#r,T,FWD ne sont pas déclarés comme variables car pour chaque terme dans la boucle ils sont fixes
 CALLE_M<-function(x,KC){
   d1C<-(x[1]+x[3]^2-log(KC))/x[3]
-  d2C<-(x[1]-log(KC))/x[3]  
+  d2C<-(x[1]-log(KC))/x[3]   # d2C<-d1C-x[3]
   d3C<-(x[2]+x[4]^2-log(KC))/x[4]
-  d4C<-(x[2]-log(KC))/x[4]
+  d4C<-(x[2]-log(KC))/x[4]   # d4C<-d1C-x[4]
   CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)
   CALL2<-exp(-r*T)*exp(x[2]+(x[3]^2/2))*pnorm(d3C)-exp(-r*T)*KC*pnorm(d4C)
   CALLE_M<-x[5]*CALL1+(1-x[5])*CALL2
@@ -63,10 +65,10 @@ CALLE_M<-function(x,KC){
 }
 
 PUTE_M<-function(x,KP){
-  PUTE_M<-CALLE_M(x,KP)+exp(-r*T)*(KP-FWD)
+  PUTE_M<-CALLE_M(x,KP)+exp(-r*T)*(KP-FWD)     #put call parity
   return(PUTE_M)}
 
-ESP_M<-function(x){
+ESP_M<-function(x){                           #expected value for a lognormal distributuion
   ESP_M<-x[5]*exp(x[1]+(x[3]^2/2))+(1-x[5])*exp(x[2]+(x[4]^2/2))
   return(ESP_M)}
 
@@ -109,7 +111,7 @@ for (m in 1:length(terms)){
   P<-prices[,3]                                   #prices of puts
   KC<-KP<-prices[,1]                              #strikes of puts and calls
   FWD<-fut[m,2]                                   #future price for maturity m
-
+  
   #1st optimization over 5 parameters to get their initial values
   PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
                  list(rep("",length(PR)),c(paste0("m",seq(2)),paste0("s",seq(2)),"p",paste0("w",seq(2)),"SCE")))
@@ -165,7 +167,6 @@ PUTE_M<-function(x,KP){
 ESP_M<-function(x){
   ESP_M<-x[7]*exp(x[1]+(x[4]^2/2))+x[8]*exp(x[2]+(x[5]^2/2))+(1-x[7]-x[8])*exp(x[3]+(x[6]^2/2))
   return(ESP_M)}
-
 #function to minimize over 9 parameters
 MSE<-function(x){
   CINF<-pmax(ESP_M(x)-KC,CALLE_M(x,KC))
@@ -247,7 +248,7 @@ for (m in 1:length(terms)){
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
-range_px<-c(0.98,1.02)*range(as.numeric(options$Calls),na.rm=T)
+range_px<-c(0.98,1.02)*range(as.numeric(options$`call strike`),na.rm=T)
 PX<-seq(range_px[1],range_px[2],0.0001)                               #prices to compute PDF and CDF
 
 #Density function
@@ -332,16 +333,10 @@ legend("bottom", inset = c(-0.05,-0.35), legend = word(matu,1), ncol=6,col=co, l
 
 
 #statistics of the densities
-moments<-list()
-
-for (i in 1:length(matu)){
-  E<-sum(PX*DNR(params[[i]]))/sum(DNR(params[[i]]))
-  VA<-sum((PX-E)^2*DNR(params[[i]]))/sum(DNR(params[[i]]))
-  SK<-sum(((PX-E)/sqrt(VA))^3*DNR(params[[i]]))/sum(DNR(params[[i]]))
-  KU<-sum(((PX-E)/sqrt(VA))^4*DNR(params[[i]]))/sum(DNR(params[[i]]))
-  mode<-PX[which.max(DNR(params[[i]]))]
-  moments[[i]]<-c(E,VA,SK,KU,mode)
-}
+E<-colSums(apply(do.call(rbind,params),1,DNR)*PX)/colSums(apply(do.call(rbind,params),1,DNR))
+VA<-colSums(apply(do.call(rbind,params),1,DNR)*(PX-E)^2)/colSums(apply(do.call(rbind,params),1,DNR))
+SK<-colSums((apply(do.call(rbind,params),1,DNR)*((PX-E)/sqrt(VA))^3))/colSums(apply(do.call(rbind,params),1,DNR))
+KU<-colSums((apply(do.call(rbind,params),1,DNR)*((PX-E)/sqrt(VA))^4))/colSums(apply(do.call(rbind,params),1,DNR))
 
 #main quantiles
 quantiles<-list()
@@ -355,6 +350,4 @@ for (i in 1:length(matu)){
   q05<-(PX[min(which(CDF(params[[i]])>0.04))]+PX[max(which(CDF(params[[i]])<0.06))])/2
   q01<-(PX[min(which(CDF(params[[i]])>0))]+PX[max(which(CDF(params[[i]])<0.02))])/2
   quantiles[[i]]<-c(q99,q95,q75,q50,q25,q05,q01)}
-
-quant<-cbind(terms,100-do.call(rbind,quantiles))
 colnames(quant)[-1]<-paste0("q",c("99","95","75","50","25","05","01"))
