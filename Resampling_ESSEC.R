@@ -28,15 +28,16 @@ EF = function (returns, nports, shorts, wmax){
     try(sol<-portfolio.optim(returns,pm=target[i]/252,reshigh=reshigh,reslow=reslow, shorts=shorts), silent=T)
     if(!is.null(sol)){
       output[[i]]<-c(i,sqrt(252)*sol$ps,252*sol$pm,sol$pw)
-      names(output[[i]])<-c("i","vol","return",paste0("w",1:length(mean),sep=""))}
+      names(output[[i]])<-c("i","vol","return",paste0("w",1:length(mean)))}
   }
   output<-as.data.frame(do.call(rbind,output))
   rownames(output)<-output$i
   return(output)
 }
 
-#Efficient frontier when short selling is forbidden
 nports<-300   #nb of ptf, thus we have 300 target expected returns
+
+#Efficient frontier when short selling is forbidden
 shorts<-F
 wmax<-1       #max weight on each asset class
 
@@ -48,39 +49,38 @@ effi_no_s<-ptfs_no_s[low_no_s:high_no_s,]
 
 #######################################   RESAMPLING HISTORICAL RETURNS   #####################################
 
+
 #Simulating n_samp samples of length 250 for the 6 assets classes
+
 require(MASS)
-set.seed(33)                                             #I set the seed of the sample
+set.seed(33)
 n_samp<-1000                                             #number of samples
 n_tirages<-250                                           #length of each sample
 estim<-resampm<-list()
 for (i in 1:n_samp){
   estim[[i]]<-mvrnorm(n_tirages,mean,sqrt(sig))/252}      #daily simulated returns in simu i
 
-#graph of the distribution of daily returns of 3 simulations for a given asset
+#graph of the distribution of daily returns 3 simulations for a given asset
 alea<-sort(sample.int(n_samp,3))
-dens_ex <- 10000*data.frame(estim[[alea[1]]][,6],
+dens_ex<-10000*data.frame(estim[[alea[1]]][,6],
                           estim[[alea[2]]][,6],
                           estim[[alea[3]]][,6])/n_samp
-dens <- apply(dens_ex, 2, density)
+dens<-apply(dens_ex, 2, density)
 
 par(mar=c(7,5,4,3),xpd=T)
-plot(NA, xlim=range(sapply(dens, "[", "x")), ylim=range(sapply(dens, "[", "y")),xlab="in %", ylab="", 
-     main="A few resampled distributions of Hermès daily stock returns")
+plot(NA, xlim=range(sapply(dens, "[", "x")), ylim=range(sapply(dens, "[", "y")),xlab="in %",
+     ylab="frequency of observation (in %)",main="A few resampled distributions of Hermès daily stock returns")
 mapply(lines, dens, col=1:length(dens))
-title(ylab="frequency of observation (in %)",adj=1)
 legend("bottom", horiz=T,inset = c(0,-0.3),text.col=1:length(dens),pch=c(NA,NA),lty=rep(1,3),
        col=1:length(dens), bty="n",legend= paste("simulation",alea))
 
-#graph of the distribution of mean returns across all simu for a given asset
+#graph of the distribution of mean returns across all simu for a given asset class
 dens_moy<-density(100*do.call(rbind,resampm)[,6])
 dens_moy$y<-100*dens_moy$y/n_samp
 
-plot(NA, xlim=range(dens_moy$x),ylim=range(dens_moy$y),xlab="in %", ylab="", col="darkblue",
-     main="Distribution of expected returns of Hermès daily stock returns")
+plot(NA, xlim=range(dens_moy$x),ylim=range(dens_moy$y),xlab="in %", ylab="frequency of observation (in %)",
+     col="darkblue",main="Distribution of expected returns of Hermès daily stock returns")
 lines(dens_moy)
-title(ylab="frequency of observation (in %)",adj=1)
-
 
 #######################################   RESAMPLED EFFICIENT FRONTIER   #####################################
 
@@ -89,22 +89,23 @@ EF2 = function (nports, shorts, wmax){
   return(EF(returns=estim[[i]], nports, shorts, wmax))}
 
 #I run the optimization for the 1000 simulated sets of returns
-resampw<-resampco<-list()
+resampw<-list()
 for (i in 1:n_samp){
   output<-EF2(nports=nports, shorts=shorts, wmax=wmax)
   if (nrow(output)==0){                                #weights are all equal to 0 when no solution
-    output<-matrix(c(0,rep(NA,2),rep(0,6)),nports,9,byrow=T,
-                   dimnames=list((1:nports),c("i","vol","return",paste0("w",1:6))))}
+    output<-matrix(c(0,rep(NA,2),rep(0,ncol(returns))),nports,3+ncol(returns),byrow=T,
+                   dimnames=list((1:nports),c("i","vol","return",paste0("w",1:ncol(returns)))))}
   else {
-    output<-rbind(matrix(c(0,rep(NA,2),rep(0,6)),nports-nrow(output),ncol(output),byrow=T,
+    output<-rbind(matrix(c(0,rep(NA,2),rep(0,ncol(returns))),nports-nrow(output),ncol(output),byrow=T,
                          dimnames=list((1:nports)[-output$i],colnames(output))), output)}
   output<-output[order(as.numeric(rownames(output))),]
   resampw[[i]]<-output[,grep("w",colnames(output))]
-  resampco[[i]]<-100*as.data.frame(output[,grep(paste(c("vol","return"),collapse="|"),colnames(output))])
 }
 
-#I average weights and I rescale for the number of simulations with a solution
+#I average weights, absent solutions also counted and corrected afterward
 aveweight<-as.matrix(Reduce("+", resampw)/n_samp)
+
+#rescaling for the number of simulations where the target return is reached and weights are non nil
 aveweight<-aveweight/replicate(ncol(aveweight),rowSums(aveweight))
 
 #I apply average weights to initial parameters to get robust efficient frontier
@@ -112,26 +113,28 @@ resamp<-as.data.frame(cbind(diag(sqrt(aveweight%*%sig%*%t(aveweight))),aveweight
 colnames(resamp)<-c("vol","return")
 
 #graph of the resampled efficient frontiers
+col<-c("darkblue","indianred")
 par(mar=c(7, 6, 4, 4),xpd=T)
-plot(NA,lwd=3,xlab="",ylab="",las=1, type="l",pch=20,ylim=ylim,xlim=xlim)
-lines(100*ptfs_no_s$vol,100*ptfs_no_s$return,col="darkblue", lwd=2)
+plot(100*ptfs_no_s$vol,100*ptfs_no_s$return,col="darkblue", lwd=2,xlab="standard deviation (%)",
+     ylab="expected return (%)",las=1, type="l",pch=20,
+     ylim=100*range(c(resamp$return,ptfs_no_s$return)), xlim=100*range(c(resamp$vol,ptfs_no_s$vol)))
 lines(100*resamp$vol,100*resamp$return,col="indianred", lwd=2)
-title(xlab="standard deviation (%)",ylab="expected return (%)",adj=1)
-legend("bottom", horiz=T,inset = c(0,-0.3),text.col=col,pch=rep(NA,3),lty=rep(1,3),col=col, bty="n",
+legend("bottom", horiz=T,inset = c(0,-0.4),text.col=col,pch=rep(NA,3),lty=rep(1,3),col=col, bty="n",
        legend= c("Markowitz efficient frontier","resampled efficient frontier"))
 
 #weights across the frontier
-cum_ave_w<-apply(aveweight[,colSums(aveweight)!=0],1,cumsum)
-at_2=seq(1,ncol(cum_ave_w), length.out=7)
+cum_ave_w<-apply(aveweight,1,cumsum)
 
 #Graph
+at_2=seq(1,ncol(cum_ave_w), length.out=7)
+colvector<-rainbow(6)
 par(mar=c(8,4,4,4) + 0.1,xpd=T)
 cex<-0.8
 par(cex.axis=cex)
-for (i in 1:nrow(cum_w)){
-  plot(1:ncol(cum_ave_w),cum_ave_w[1+nrow(cum_w)-i,], xlab="",ylab="", ylim=c(0,1),
+for (i in 1:nrow(cum_ave_w)){
+  plot(1:ncol(cum_ave_w),cum_ave_w[1+nrow(cum_ave_w)-i,], xlab="",ylab="", ylim=c(0,1),
        xlim=c(0,ncol(cum_ave_w)),las=1, col=colvector[i],pch=20, axes=F)
-  polygon(c(1:ncol(cum_ave_w),ncol(cum_ave_w):1), c(rep(0,ncol(cum_ave_w)),rev(cum_ave_w[1+nrow(cum_w)-i,])),
+  polygon(c(1:ncol(cum_ave_w),ncol(cum_ave_w):1), c(rep(0,ncol(cum_ave_w)),rev(cum_ave_w[1+nrow(cum_ave_w)-i,])),
           col=colvector[i])
   par(new=T)}
 axis(1, at=at_2, labels=round(100*resamp$return,1)[at_2], cex.axis =cex)
