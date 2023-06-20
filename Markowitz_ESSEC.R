@@ -7,7 +7,6 @@ pacman::p_load("tseries","readxl")
 #####################   DATA DOWNLOAD AND COMPUTATION OF EXPECTED RETURNS AND COVARIANCES   ################
 
 #I load the data
-setwd("Z://1_Service/1.2_Agents_Service/William/Enseignement/Mon cours 2022/mean variance")
 data<-as.data.frame(read_excel("stock_prices.xlsx",1))          #load stock prices
 data<-apply(data,2,as.numeric)                                  #conversion in numeric
 returns<-apply(data[,-1],2,diff)/data[-1,-1]                    #daily historical returns
@@ -131,8 +130,7 @@ xx<-barplot(100*rbind(gmvp$pw,gmvp_no$pw),axes=T,ylab="", col=c("darkred","india
             ylim=130*range(c(gmvp$pw,gmvp_no$pw)),names.arg=colnames(returns))
 title(sub="%",adj=0.02,line=-20)
 text(x=xx,cex=0.7,y=100*c(rbind(gmvp$pw,gmvp_no$pw)),
-     gsub("0%","",paste(round(100*c(rbind(gmvp$pw,gmvp_no$pw)),1),"%",sep="")),
-     pos=3,font =i)
+     gsub("0%","",paste(round(100*c(rbind(gmvp$pw,gmvp_no$pw)),1),"%",sep="")), pos=3,font =i)
 legend("topleft",legend=c("short selling","no short selling"),
        text.col=c("darkred","indianred"),pch=c(15),col=c("darkred","indianred"))
 box()
@@ -141,14 +139,11 @@ box()
 par(mar=c(7,4,4,4) + 0.1)
 cex<-0.8
 par(cex.axis=cex)
-xx<-barplot(100*rbind(target_1$pw, target_1_no$pw),axes=T,ylab="",
-            col=c("darkblue","#92C5DE"),las=2,beside=T,
-            ylim=130*range(c(target_1$pw, target_1_no$pw)),
-            names.arg=colnames(returns))
+xx<-barplot(100*rbind(target_1$pw, target_1_no$pw),axes=T,ylab="",col=c("darkblue","#92C5DE"),las=2,beside=T,
+            ylim=130*range(c(target_1$pw, target_1_no$pw)), names.arg=colnames(returns))
 title(sub="%",adj=0.02,line=-20)
 text(x=xx,cex=0.7,y=100*c(rbind(target_1$pw, target_1_no$pw)),
-     paste(round(100*c(rbind(target_1$pw, target_1_no$pw)),1),"%",sep=""),
-     pos=3,font =i)
+     paste(round(100*c(rbind(target_1$pw, target_1_no$pw)),1),"%",sep=""),pos=3,font =i)
 legend("topleft",legend=c("short selling","no short selling"),
        text.col=c("darkblue","#92C5DE"),pch=c(15),col=c("darkblue","#92C5DE"))
 box()
@@ -156,7 +151,8 @@ box()
 #######################################   FINDING THE EFFICIENT FRONTIER   #####################################
 
 EF = function (returns, nports, shorts, wmax){
-  max_ret<-(1+as.numeric(shorts)*0.5)*max(mean)     #la cible de renta maximale
+  max_ret<-max(mean)
+  #max_ret<-(1+as.numeric(shorts)*0.5)*max(mean)     #la cible de renta maximale
   target<-seq(-max_ret, max_ret, len= nports)       #on définit les cibles de renta via nports et maxret
   reslow<-rep(-as.numeric(shorts), length(mean))    #vecteur de poids minimum
   reshigh<-rep(wmax,length(mean))                   #vecteur de poids max
@@ -166,7 +162,7 @@ EF = function (returns, nports, shorts, wmax){
     try(sol<-portfolio.optim(returns,pm=target[i]/252,reshigh=reshigh,reslow=reslow, shorts=shorts), silent=T)
     if(!is.null(sol)){
       output[[i]]<-c(i,sqrt(252)*sol$ps,252*sol$pm,sol$pw)
-      names(output[[i]])<-c("i","vol","return",paste0("w",1:length(mean),sep=""))}
+      names(output[[i]])<-c("i","vol","return",paste0("w",1:length(mean)))}
   }
   output<-as.data.frame(do.call(rbind,output))
   rownames(output)<-output$i
@@ -194,7 +190,7 @@ lines(ptfs$vol,ptfs$return,col="indianred",pch=20)
 legend("bottom",horiz=T,inset = c(0,-0.35),legend=c("Minimum variance frontier","Efficient frontier"),
        text.col=c("indianred","lightblue"),col=c("indianred","lightblue"), bty="n", lty=1)
 
-#Graph minimum variance frontier and efficient frontier (with ggplot2)
+#Graph with ggplot2
 ggplot(100*ptfs,aes(vol,return))+geom_point(aes(color="Minimum Variance Frontier"))+
   geom_line(data=100*effi,aes(color="Efficient frontier"), size=1) +
   labs(x="standard deviation (%)", y="expected return (%)", color="")+
@@ -211,7 +207,7 @@ ggplot(100*ptfs,aes(vol,return))+geom_point(aes(color="Minimum Variance Frontier
 
 shorts<-F
 
-ptfs_no_s<-EF(returns=returns,nports=nports,shorts=shorts,wmax=wmax)
+ptfs_no_s<-EF(returns=returns,nports=nports,shorts=shorts,wmax=wmax)     #some returns not attainable with sign constrained optim
 low_no_s<-which.min(ptfs_no_s$vol)
 high_no_s<-which.max(ptfs_no_s$return)
 effi_no_s<-ptfs_no_s[low_no_s:high_no_s,]
@@ -225,8 +221,10 @@ lines(ptfs_no_s$vol,ptfs_no_s$return,col="indianred",pch=20)
 legend("bottom",horiz=T,inset = c(0,-0.35),legend=c("Minimum variance frontier","Efficient frontier"),
        text.col=c("indianred","darkblue"),col=c("indianred","darkblue"),lty=1, bty="n")
 
-#plot weightings for all portfolios on the frontier
+#Weights for each target return
 cum_w<-apply(ptfs_no_s[,grep("w",colnames(ptfs_no_s))],1,cumsum)
+
+#Transition map of weights for all target returns
 colvector<-rainbow(6)
 at=seq(1,ncol(cum_w), length.out=7)
 
@@ -260,6 +258,11 @@ lines(ptfs_no_s$vol,ptfs_no_s$return,col=col_no[3],pch=20)
 legend("bottom",horiz=T,inset = c(0,-0.35),text.col=col_no,col=col_no,lty=1, bty="n",
        legend=c("MV frontier with short","EF with short","MV frontier w/o short","EF w/o short"))
 
+#for every level of expected return, the ptf with the short sales constraint incurs a higher risk
+compar<-merge(x = ptfs, y = ptfs_no_s, by = "i", all=T)
+compar<-compar[apply(!is.na(compar),1,all),]
+compar$diff_vol<-compar$vol.y-compar$vol.x
+
 #3. Efficient frontier when individual asset weights are capped at 25%
 
 wmax<-0.25
@@ -281,10 +284,11 @@ legend("bottom",horiz=T,inset = c(0,-0.35), text.col=col_f,col=col_f,lty=1, bty=
        legend=c("Cap on weights at 25%","Short selling forbidden","short selling allowed"))
 box()
 
-#plot weightings for all portfolios on the frontier
+#Weights for all target returns
 cum_w_25<-apply(ptfs_25[,grep("w",colnames(ptfs_25))],1,cumsum)
-at_25=seq(1,ncol(cum_w_25), length.out=7)
 
+#Transition map of weights for all target returns
+at_25=seq(1,ncol(cum_w_25), length.out=7)
 par(mar=c(8,4,4,4) + 0.1,xpd=T)
 cex<-0.8
 par(cex.axis=cex)
