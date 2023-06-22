@@ -368,14 +368,11 @@ co<-rainbow(length(matu))
 xlim<-100*range(tri)
 series_rev<-lapply(seq_along(tri), function(x) cbind(100*unlist(tri[[x]]), unlist(series_2[[x]])))
 
-par(mar=c(7,4,4,4) + 0.1, xpd=T)
 cex<-0.8
-par(cex.axis=cex)
-plot(NA, pch=20, axes=T,xlab="",ylab="",xlim=xlim,ylim=ylim,las=1)
+par(mar=c(7,4,4,4) + 0.1, xpd=T, cex.axis=cex)
+plot(NA, pch=20, xlab="",ylab="frequency",xlim=xlim,ylim=ylim,las=1,main="RNDs from a mixture of 2 lognormals")
 mapply(lines,series_rev,col=co)
-title(main="RNDs from a mixture of 2 lognormals")
 mapply(title, c("OAT future", "yield (%)"),adj=c(1,1),line=c(-3,-2))
-mtext("frequency",side=2, line=2, las=1)
 legend("bottom", inset = c(-0.05,-0.2), legend = word(matu,1), horiz = T, col=co, lty = 1, bty = "n")
 
 #cumulative density function
@@ -391,22 +388,19 @@ CDF<-function(x){
 series_2_CDF<-apply(apply(do.call(rbind,params),1,CDF),2,list)
 series_CDF<-lapply(seq_along(series_1), function(x) cbind(100*unlist(rev(tri[[x]])), unlist(series_2_CDF[[x]])))
 
-par(mar=c(7,6,4,4) + 0.1, xpd=T)
 cex<-0.8
-par(cex.axis=cex)
-plot(NA, pch=20, axes=T,xlab="",ylab="%",xlim=xlim,ylim=c(0,1),las=1)
+par(mar=c(7,6,4,4) + 0.1, xpd=T, cex.axis=cex)
+plot(NA, pch=20,xlab="",ylab="frequency",xlim=xlim,ylim=c(0,1),las=1,main="RNDs from a mixture of 2 lognormals")
 mapply(lines,series_CDF,col=co)
-title(main="RNDs from a mixture of 2 lognormals")
-title(sub="OAT future yield (EUR)",adj =1,line=2)
-mtext("frequency",side=2, line=2, las=2)
+title(sub="OAT future yield (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.35), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
-
-#statistics of the densities of yields
-E_y<-colSums(apply(do.call(rbind,params),1,DNR)*do.call(cbind, tri))/colSums(apply(do.call(rbind,params),1,DNR))
-VA_y<-colSums(apply(do.call(rbind,params),1,DNR)*(do.call(cbind, tri)-E_y)^2)/colSums(apply(do.call(rbind,params),1,DNR))
-SK_y<-colSums(apply(do.call(rbind,params),1,DNR)*((do.call(cbind, tri)-E_y)/sqrt(VA_y))^3)/colSums(apply(do.call(rbind,params),1,DNR))
-KU_y<-colSums(apply(do.call(rbind,params),1,DNR)*((do.call(cbind, tri)-E_y)/sqrt(VA_y))^4)/colSums(apply(do.call(rbind,params),1,DNR))
+#mean, variance, skewness and kurtosis of the densities
+dens<-apply(do.call(rbind,params),1,DNR)
+E_y<-colSums(dens*do.call(cbind, tri))/colSums(dens)
+VA_y<-colSums(dens*(do.call(cbind, tri)-E_y)^2)/colSums(dens)
+SK_y<-colSums(dens*((do.call(cbind, tri)-E_y)/sqrt(VA_y))^3)/colSums(dens)
+KU_y<-colSums(dens*((do.call(cbind, tri)-E_y)/sqrt(VA_y))^4)/colSums(dens)
 
 #main quantiles of the densities
 quantiles<-list()
