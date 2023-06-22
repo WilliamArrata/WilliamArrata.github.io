@@ -39,14 +39,13 @@ graph<-graph[last(which(is.na(graph[,1]))):nrow(graph),]
 
 cex<-0.8
 col<-c("lightblue","indianred")
-par(mar=c(6,4,4,4) + 0.1, xpd=T)
-par(cex.axis=cex)
+par(mar=c(6,4,4,4) + 0.1, xpd=T, cex.axis=cex)
 plot(graph[,1:2],xlim=range(graph[,1],na.rm=T),ylim=range(graph[,2:3],na.rm=T),col=col[1],type="l",
      main=paste(word(last(matu),1),"Euribor 3M options prices at all strikes, 05/31/2023",sep=" "),
      pch=20,xlab="",ylab="option premium (EUR)")
 lines(graph[,c(1,3)], col=col[2])
 title(xlab="strike price (EUR)",adj=1)
-legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.2),legend=c("calls","puts"),lty=1,text.col=col,col=col)
+legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.25),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
 
 ###############################  CALIBRATION OF PARAMETERS  ##########################################
@@ -148,11 +147,11 @@ for (m in 1:length(terms)){
 #European call price, put price, and expected spot price for a sum of 3 lognormals
 CALLE_M<-function(x,KC){
   d1C<-(x[1]+x[4]^2-log(KC))/x[4]
-  d2C<-(x[1]-log(KC))/x[4]   # d2C<-d1C-x[3]
+  d2C<-(x[1]-log(KC))/x[4]
   d3C<-(x[2]+x[5]^2-log(KC))/x[5]
-  d4C<-(x[2]-log(KC))/x[5]   # d4C<-d1C-x[4]
+  d4C<-(x[2]-log(KC))/x[5] 
   d5C<-(x[3]+x[6]^2-log(KC))/x[6]
-  d6C<-(x[3]-log(KC))/x[6]   # d4C<-d1C-x[4]
+  d6C<-(x[3]-log(KC))/x[6]
   CALL1<-exp(-r*T)*exp(x[1]+(x[4]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)
   CALL2<-exp(-r*T)*exp(x[2]+(x[5]^2/2))*pnorm(d3C)-exp(-r*T)*KC*pnorm(d4C)
   CALL3<-exp(-r*T)*exp(x[3]+(x[6]^2/2))*pnorm(d5C)-exp(-r*T)*KC*pnorm(d6C)
@@ -282,12 +281,10 @@ series<-lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unl
 par(mar=c(7,4,4,4) + 0.1, xpd=T)
 cex<-0.8
 par(cex.axis=cex)
-plot(NA, pch=20, axes=T,xlab="",ylab="",xlim=xlim,ylim=ylim,las=1)
+plot(NA,pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=xlim,ylim=ylim,las=1)
 mapply(lines,series,col=co)
-title(main="RNDs from a mixture of 2 lognormals")
 title(sub="3 mth Euribor future price (EUR)",adj =1,line=2)
-mtext("frequency",side=2, line=2, las=1)
-legend("bottom", inset = c(-0.05,-0.35), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
+legend("bottom", inset = c(-0.05,-0.4), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
 #Graph of risk neutral densities for Euribor rates
 xlim_r<-100-rev(range(PX))
@@ -297,15 +294,12 @@ series_rev_2<-apply(apply(apply(do.call(rbind,params),1,DNR),2,rev),2,list)
 series_rev<-lapply(seq_along(series_rev_1),
                    function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_rev_2[[x]])))
 
-par(mar=c(7,4,4,4) + 0.1, xpd=T)
 cex<-0.8
-par(cex.axis=cex)
-plot(NA, pch=20, axes=T,xlab="",ylab="",xlim=xlim_r,ylim=ylim,las=1)
+par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
+plot(NA, pch=20,xlab="",ylab="frequency",xlim=xlim_r,ylim=ylim,las=1,main="RNDs from a mixture of 2 lognormals")
 mapply(lines,series_rev,col=co)
-title(main="RNDs from a mixture of 2 lognormals")
 title(sub="3 mth Euribor future rate (%)",adj =1,line=2)
-mtext("frequency",side=2, line=2, las=1)
-legend("bottom", inset = c(-0.05,-0.35), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
+legend("bottom", inset = c(-0.05,-0.45), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
 
 #cumulative density function
@@ -317,26 +311,23 @@ CDF<-function(x){
   else {return(x[5]*plnorm(PX,meanlog = x[1], sdlog = x[3])+(1-x[5])*plnorm(PX,meanlog = x[2], sdlog = x[4])  )}
 }  
 
-#Graph of cumulative density functions
+#Graph of cumulative density functions for rates
 series_2_CDF<-apply(apply(do.call(rbind,params),1,CDF),2,list)
-series_CDF<-lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unlist(series_2_CDF[[x]])))
+series_CDF<-lapply(seq_along(series_1), function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_2_CDF[[x]])))
 
-par(mar=c(7,6,4,4) + 0.1, xpd=T)
 cex<-0.8
-par(cex.axis=cex)
-plot(NA, pch=20, axes=T,xlab="",ylab="%",xlim=xlim,ylim=c(0,1),las=1)
+par(mar=c(8,6,4,4) + 0.1, xpd=T, cex.axis=cex)
+plot(NA, pch=20,xlab="",ylab="frequency",las=1,main="RNDs from a mixture of 2 lognormals",xlim=xlim_r,ylim=0:1)
 mapply(lines,series_CDF,col=co)
-title(main="RNDs from a mixture of 2 lognormals")
-title(sub="3 mth Euribor future price (EUR)",adj =1,line=2)
-mtext("frequency",side=2, line=2, las=2)
-legend("bottom", inset = c(-0.05,-0.35), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
+title(sub="3 mth Euribor rate (%)",adj =1,line=2)
+legend("bottom", inset = c(-0.05,-0.5), legend = word(matu,1), ncol=5,col=co, lty = 1, bty = "n")
 
-
-#statistics of the densities
-E<-colSums(apply(do.call(rbind,params),1,DNR)*PX)/colSums(apply(do.call(rbind,params),1,DNR))
-VA<-colSums(apply(do.call(rbind,params),1,DNR)*(PX-E)^2)/colSums(apply(do.call(rbind,params),1,DNR))
-SK<-colSums((apply(do.call(rbind,params),1,DNR)*((PX-E)/sqrt(VA))^3))/colSums(apply(do.call(rbind,params),1,DNR))
-KU<-colSums((apply(do.call(rbind,params),1,DNR)*((PX-E)/sqrt(VA))^4))/colSums(apply(do.call(rbind,params),1,DNR))
+#mean, variance, skewness and kurtosis ofr each density
+dens<-apply(do.call(rbind,params),1,DNR)
+E_y<-colSums(dens*(100-rev(PX)))/colSums(dens)
+VA_y<-colSums(dens*(100-rev(PX)-E_y)^2)/colSums(dens)
+SK_y<-colSums(dens*((100-rev(PX)-E_y)/sqrt(VA_y))^3)/colSums(dens)
+KU_y<-colSums(dens*((100-rev(PX)-E_y)/sqrt(VA_y))^4)/colSums(dens)
 
 #main quantiles
 quantiles<-list()
@@ -350,4 +341,6 @@ for (i in 1:length(matu)){
   q05<-(PX[min(which(CDF(params[[i]])>0.04))]+PX[max(which(CDF(params[[i]])<0.06))])/2
   q01<-(PX[min(which(CDF(params[[i]])>0))]+PX[max(which(CDF(params[[i]])<0.02))])/2
   quantiles[[i]]<-c(q99,q95,q75,q50,q25,q05,q01)}
+
+quant<-cbind(terms,100-do.call(rbind,quantiles))
 colnames(quant)[-1]<-paste0("q",c("99","95","75","50","25","05","01"))
