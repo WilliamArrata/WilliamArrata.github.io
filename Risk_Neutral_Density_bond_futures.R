@@ -59,7 +59,7 @@ CALLE_M<-function(x,KC){
   d2C<-(x[1]-log(KC))/x[3]  
   d3C<-(x[2]+x[4]^2-log(KC))/x[4]
   d4C<-(x[2]-log(KC))/x[4]
-  CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)#by default, Mean=0, sd=1 in pnorm
+  CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C) #by default, Mean=0, sd=1 in pnorm
   CALL2<-exp(-r*T)*exp(x[2]+(x[3]^2/2))*pnorm(d3C)-exp(-r*T)*KC*pnorm(d4C)
   CALLE_M<-x[5]*CALL1+(1-x[5])*CALL2
   return(CALLE_M)
