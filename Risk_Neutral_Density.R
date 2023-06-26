@@ -1,6 +1,8 @@
 require("pacman")
 pacman::p_load("stringr","Hmisc","stats","readxl","data.table")
 
+setwd("Z://5_Gestion_Financiere/5.1_RESU-BDF/SIMU_BDF/Stratégie 2023/CAP_juin_2023/projections_stochastiques/Euribor")
+
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
@@ -57,7 +59,7 @@ CALLE_M<-function(x,KC){
   d2C<-(x[1]-log(KC))/x[3]   # d2C<-d1C-x[3]
   d3C<-(x[2]+x[4]^2-log(KC))/x[4]
   d4C<-(x[2]-log(KC))/x[4]   # d4C<-d1C-x[4]
-  CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)
+  CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C) #by default, Mean=0, sd=1 in pnorm
   CALL2<-exp(-r*T)*exp(x[2]+(x[3]^2/2))*pnorm(d3C)-exp(-r*T)*KC*pnorm(d4C)
   CALLE_M<-x[5]*CALL1+(1-x[5])*CALL2
   return(CALLE_M)
@@ -113,7 +115,7 @@ for (m in 1:length(terms)){
   
   #1st optimization over 5 parameters to get their initial values
   PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
-                 list(rep("",length(PR)),c(paste0("m",seq(2)),paste0("s",seq(2)),"p",paste0("w",seq(2)),"SCE")))
+                 list(c(),c(paste0("m",seq(2)),paste0("s",seq(2)),"p",paste0("w",seq(2)),"SCE")))
   start<-c(log(FWD),log(FWD),0.2,0.2)
   lower<-c(-10,-10,0.000001,0.000001)
   upper<-c(10,10,0.9,0.9)
@@ -147,11 +149,11 @@ for (m in 1:length(terms)){
 #European call price, put price, and expected spot price for a sum of 3 lognormals
 CALLE_M<-function(x,KC){
   d1C<-(x[1]+x[4]^2-log(KC))/x[4]
-  d2C<-(x[1]-log(KC))/x[4]
+  d2C<-(x[1]-log(KC))/x[4]   # d2C<-d1C-x[3]
   d3C<-(x[2]+x[5]^2-log(KC))/x[5]
-  d4C<-(x[2]-log(KC))/x[5] 
+  d4C<-(x[2]-log(KC))/x[5]   # d4C<-d1C-x[4]
   d5C<-(x[3]+x[6]^2-log(KC))/x[6]
-  d6C<-(x[3]-log(KC))/x[6]
+  d6C<-(x[3]-log(KC))/x[6]   # d4C<-d1C-x[4]
   CALL1<-exp(-r*T)*exp(x[1]+(x[4]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)
   CALL2<-exp(-r*T)*exp(x[2]+(x[5]^2/2))*pnorm(d3C)-exp(-r*T)*KC*pnorm(d4C)
   CALL3<-exp(-r*T)*exp(x[3]+(x[6]^2/2))*pnorm(d5C)-exp(-r*T)*KC*pnorm(d6C)
@@ -208,7 +210,7 @@ for (m in 1:length(terms)){
   
   #first optimization on 5 parameter
   PARA<-matrix(nrow=length(PR),ncol=12,dimnames=
-                 list(rep("",length(PR)),c(paste0("m",seq(3)),paste0("s",seq(3)),paste0("p",seq(2)),paste0("w",seq(2)),"p1+p2","SCE")))
+                 list(c(),c(paste0("m",seq(3)),paste0("s",seq(3)),paste0("p",seq(2)),paste0("w",seq(2)),"p1+p2","SCE")))
   lower<-c(-10,-10,-10,0.000001,0.000001,0.000001)
   upper<-c(10,10,10,0.8,0.8,0.8)
   start<-c(log(FWD),log(FWD),log(FWD),0.2,0.2,0.2)
@@ -243,6 +245,13 @@ for (m in 1:length(terms)){
                  solu[7],
                  solu[8])
 }
+
+# write.table(setNames(do.call(cbind.data.frame, lapply(lapply(params, unlist),
+#                                                       `length<-`, max(lengths(params)))),word(matu,1)),
+#             file=paste("outputs/Eur_3m_params_2log_DNR_31may_with_zero_prices.csv",sep=""),sep=";",dec=",")
+
+params<-as.list(read.csv("outputs/Eur_3m_params_2log_DNR_31may_with_zero_prices.csv",header = T, sep = ";", quote = "\"",
+                         dec = ",", fill = T, comment.char = "",stringsAsFactors = F))
 
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
