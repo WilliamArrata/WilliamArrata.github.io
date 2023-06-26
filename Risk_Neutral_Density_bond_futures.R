@@ -1,6 +1,8 @@
 require("pacman")
 pacman::p_load("stringr","Hmisc","stats","readxl","data.table")
 
+setwd("Z://5_Gestion_Financiere/5.1_RESU-BDF/SIMU_BDF/Stratégie 2023/CAP_juin_2023/projections_stochastiques/OAT")
+
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
@@ -57,7 +59,7 @@ CALLE_M<-function(x,KC){
   d2C<-(x[1]-log(KC))/x[3]  
   d3C<-(x[2]+x[4]^2-log(KC))/x[4]
   d4C<-(x[2]-log(KC))/x[4]
-  CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)
+  CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)#by default, Mean=0, sd=1 in pnorm
   CALL2<-exp(-r*T)*exp(x[2]+(x[3]^2/2))*pnorm(d3C)-exp(-r*T)*KC*pnorm(d4C)
   CALLE_M<-x[5]*CALL1+(1-x[5])*CALL2
   return(CALLE_M)
@@ -113,7 +115,7 @@ for (m in 1:length(terms)){
   
   #1st optimization over 5 parameters to get their initial values
   PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
-                 list(rep("",length(PR)),c(paste0("m",seq(2)),paste0("s",seq(2)),"p",paste0("w",seq(2)),"SCE")))
+                 list(c(),c(paste0("m",seq(2)),paste0("s",seq(2)),"p",paste0("w",seq(2)),"SCE")))
   start<-c(log(FWD),log(FWD),0.2,0.2)
   lower<-c(-10,-10,0.000001,0.000001)
   upper<-c(10,10,0.9,0.9)
@@ -209,7 +211,7 @@ for (m in 1:length(terms)){
   
   #first optimization on 5 parameter
   PARA<-matrix(nrow=length(PR),ncol=12,dimnames=
-                 list(rep("",length(PR)),c(paste0("m",seq(3)),paste0("s",seq(3)),paste0("p",seq(2)),paste0("w",seq(2)),"p1+p2","SCE")))
+                 list(c(),c(paste0("m",seq(3)),paste0("s",seq(3)),paste0("p",seq(2)),paste0("w",seq(2)),"p1+p2","SCE")))
   lower<-c(-10,-10,-10,0.000001,0.000001,0.000001)
   upper<-c(10,10,10,0.8,0.8,0.8)
   start<-c(log(FWD),log(FWD),log(FWD),0.2,0.2,0.2)
@@ -244,6 +246,11 @@ for (m in 1:length(terms)){
                  solu[7],
                  solu[8])
 }
+
+# write.table(do.call(cbind,params),file=paste("outputs/OATM_params_DNR_31mai_2_log_with_zero_prices.csv",sep=""),sep=";",dec=",")
+
+params<-as.list(read.csv("outputs/OATM_params_DNR_31mai_2_log_with_zero_prices.csv",header = T, sep = ";", quote = "\"",
+                         dec = ",", fill = T, comment.char = "",stringsAsFactors = F))
 
 
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
@@ -298,7 +305,7 @@ OATA_fut$ctd_matu<-as.Date(OATA_fut$ctd_matu,format = "%d/%m/%Y")
 OATA_fut<-OATA_fut[match(fut$V1,OATA_fut$ticker),]
 
 cp<-format(OATA_fut$ctd_matu, format="%m-%d")
-cp<-matrix(t(outer(2022:2024, cp, paste, sep="-")), nrow=nrow(OATA_fut), dimnames= list(rep("",4),c("prev_cp","curr_cp","next_cp")))
+cp<-matrix(t(outer(2022:2024, cp, paste, sep="-")), nrow=nrow(OATA_fut), dimnames= list(c(),c("prev_cp","curr_cp","next_cp")))
 OATA_fut<-cbind(OATA_fut,cp)
 OATA_fut[,grep("cp", colnames(OATA_fut))]<-apply(OATA_fut[,grep("cp", colnames(OATA_fut))],2,as.Date)
 OATA_fut$option_matu<-as.Date(sub(").*","",word(matu,-1)),format = "%m/%d/%y")    #dates de matu des options
@@ -312,6 +319,7 @@ cp_dat_ctd<-as.Date(diag(as.matrix(OATA_fut[,correc])), origin='1970-1-1')
 
 acc_p<-as.numeric(OATA_fut$option_matu-cp_dat_ctd)/365    #durée d'accrual à la date de matu
 CC<-OATA_fut$coupon*acc_p                                    #le coupon couru de la CtD à la matu de l'option
+
 
 ####################  CONVERSION OF FUTURES PRICES INTO CTD PRICES THEN YIELDS AT MATU #######################
 
@@ -406,7 +414,7 @@ KU_y<-colSums(dens*((do.call(cbind, tri)-E_y)/sqrt(VA_y))^4)/colSums(dens)
 quantiles<-list()
 for (i in 1:length(matu)){
   q99<-(100*tri[[i]][min(which(CDF(params[[i]])>0.98))]+
-     100*tri[[i]][max(which(CDF(params[[i]])<1))])/2
+          100*tri[[i]][max(which(CDF(params[[i]])<1))])/2
   q95<-(100*tri[[i]][min(which(CDF(params[[i]])>0.94))]+
           100*tri[[i]][max(which(CDF(params[[i]])<0.96))])/2
   q75<-(100*tri[[i]][min(which(CDF(params[[i]])>0.74))]+
