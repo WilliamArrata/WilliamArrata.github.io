@@ -56,7 +56,7 @@ require(MASS)
 set.seed(33)
 n_samp<-1000                                             #number of samples
 n_tirages<-250                                           #length of each sample
-estim<-resampm<-list()
+estim<-list()
 for (i in 1:n_samp){
   estim[[i]]<-mvrnorm(n_tirages,mean,sqrt(sig))/252}      #daily simulated returns in simu i
 
