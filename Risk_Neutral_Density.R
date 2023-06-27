@@ -1,8 +1,6 @@
 require("pacman")
 pacman::p_load("stringr","Hmisc","stats","readxl","data.table")
 
-setwd("Z://5_Gestion_Financiere/5.1_RESU-BDF/SIMU_BDF/Stratégie 2023/CAP_juin_2023/projections_stochastiques/Euribor")
-
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
@@ -245,13 +243,6 @@ for (m in 1:length(terms)){
                  solu[7],
                  solu[8])
 }
-
-# write.table(setNames(do.call(cbind.data.frame, lapply(lapply(params, unlist),
-#                                                       `length<-`, max(lengths(params)))),word(matu,1)),
-#             file=paste("outputs/Eur_3m_params_2log_DNR_31may_with_zero_prices.csv",sep=""),sep=";",dec=",")
-
-params<-as.list(read.csv("outputs/Eur_3m_params_2log_DNR_31may_with_zero_prices.csv",header = T, sep = ";", quote = "\"",
-                         dec = ",", fill = T, comment.char = "",stringsAsFactors = F))
 
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
