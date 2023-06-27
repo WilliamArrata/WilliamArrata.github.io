@@ -7,6 +7,7 @@ pacman::p_load("tseries","readxl")
 #####################   DATA DOWNLOAD AND COMPUTATION OF EXPECTED RETURNS AND COVARIANCES   ################
 
 #I load the data
+setwd("Z://1_Service/1.2_Agents_Service/William/Enseignement/Mon cours 2022/mean variance")
 data<-as.data.frame(read_excel("stock_prices.xlsx",1))          #load stock prices
 data<-apply(data,2,as.numeric)                                  #conversion in numeric
 returns<-apply(data[,-1],2,diff)/data[-1,-1]                    #daily historical returns
@@ -39,9 +40,9 @@ nports<-300   #nb of ptf, thus we have 300 target expected returns
 
 #Efficient frontier when short selling is forbidden
 shorts<-F
-wmax<-1       #max weight on each asset class
+wmax<-1
 
-ptfs_no_s<-EF(returns=returns,nports=nports,shorts=shorts,wmax=wmax)     #some returns not attainable with sign constrained optim
+ptfs_no_s<-EF(returns=returns,nports=nports,shorts=shorts,wmax=wmax)
 low_no_s<-which.min(ptfs_no_s$vol)
 high_no_s<-which.max(ptfs_no_s$return)
 effi_no_s<-ptfs_no_s[low_no_s:high_no_s,]
@@ -50,23 +51,20 @@ effi_no_s<-ptfs_no_s[low_no_s:high_no_s,]
 #######################################   RESAMPLING HISTORICAL RETURNS   #####################################
 
 
-#Simulating n_samp samples of length 250 for the 6 assets classes
-
+#Simulating n_samp samples of length n_tirages for the 6 assets
 require(MASS)
 set.seed(33)
-n_samp<-1000                                             #number of samples
-n_tirages<-250                                           #length of each sample
-estim<-list()
-for (i in 1:n_samp){
-  estim[[i]]<-mvrnorm(n_tirages,mean,sqrt(sig))/252}      #daily simulated returns in simu i
+n_samp<-1000                                                       #number of samples
+n_tirages<-250                                                     #length of each sample
+estim <- replicate(n_samp , mvrnorm(n_tirages,mean,sqrt(sig))/252) #daily simulated returns in each simu
+resampm <- colMeans(estim, dims = 1)                               #the average return for each assets in each simu
 
-#graph of the distribution of daily returns 3 simulations for a given asset
-alea<-sort(sample.int(n_samp,3))
-dens_ex<-10000*data.frame(estim[[alea[1]]][,6],
-                          estim[[alea[2]]][,6],
-                          estim[[alea[3]]][,6])/n_samp
-dens<-apply(dens_ex, 2, density)
+#Distribution of daily returns for 3 random simulations for a given asset
+alea<-sort(sample.int(n_samp,3))                                  
+dens_ex<-10000*data.frame(estim[,6,alea])/n_samp                   #I pick 3 simulations randomly for asset 6
+dens<-apply(dens_ex, 2, density)                                   #I represent their return distrib with density
 
+#Graph
 par(mar=c(7,5,4,3),xpd=T)
 plot(NA, xlim=range(sapply(dens, "[", "x")), ylim=range(sapply(dens, "[", "y")),xlab="in %",
      ylab="frequency of observation (in %)",main="A few resampled distributions of Hermès daily stock returns")
@@ -74,10 +72,11 @@ mapply(lines, dens, col=1:length(dens))
 legend("bottom", horiz=T,inset = c(0,-0.3),text.col=1:length(dens),pch=c(NA,NA),lty=rep(1,3),
        col=1:length(dens), bty="n",legend= paste("simulation",alea))
 
-#graph of the distribution of mean returns across all simu for a given asset class
-dens_moy<-density(100*do.call(rbind,resampm)[,6])
+#Distribution of mean returns across all simu for a given asset class
+dens_moy<-density(100*resampm[6,])
 dens_moy$y<-100*dens_moy$y/n_samp
 
+#Graph
 plot(NA, xlim=range(dens_moy$x),ylim=range(dens_moy$y),xlab="in %", ylab="frequency of observation (in %)",
      col="darkblue",main="Distribution of expected returns of Hermès daily stock returns")
 lines(dens_moy)
@@ -86,7 +85,7 @@ lines(dens_moy)
 
 #I write a new function which has resampled series of returns as input
 EF2 = function (nports, shorts, wmax){
-  return(EF(returns=estim[[i]], nports, shorts, wmax))}
+  return(EF(returns=estim[,,i], nports, shorts, wmax))}
 
 #I run the optimization for the 1000 simulated sets of returns
 resampw<-list()
@@ -102,10 +101,9 @@ for (i in 1:n_samp){
   resampw[[i]]<-output[,grep("w",colnames(output))]
 }
 
-#I average weights, absent solutions also counted and corrected afterward
+#I average weights across each target return for all optimizations
 aveweight<-as.matrix(Reduce("+", resampw)/n_samp)
-
-#rescaling for the number of simulations where the target return is reached and weights are non nil
+#I rescale for the number of simulations where the target return not reached and weights are 0 by default
 aveweight<-aveweight/replicate(ncol(aveweight),rowSums(aveweight))
 
 #I apply average weights to initial parameters to get robust efficient frontier
@@ -116,13 +114,13 @@ colnames(resamp)<-c("vol","return")
 col<-c("darkblue","indianred")
 par(mar=c(7, 6, 4, 4),xpd=T)
 plot(100*ptfs_no_s$vol,100*ptfs_no_s$return,col="darkblue", lwd=2,xlab="standard deviation (%)",
-     ylab="expected return (%)",las=1, type="l",pch=20,
-     ylim=100*range(c(resamp$return,ptfs_no_s$return)), xlim=100*range(c(resamp$vol,ptfs_no_s$vol)))
+     ylab="expected return (%)",las=1, type="l",pch=20,ylim=100*range(c(resamp$return,ptfs_no_s$return)),
+     xlim=100*range(c(resamp$vol,ptfs_no_s$vol)))
 lines(100*resamp$vol,100*resamp$return,col="indianred", lwd=2)
 legend("bottom", horiz=T,inset = c(0,-0.4),text.col=col,pch=rep(NA,3),lty=rep(1,3),col=col, bty="n",
        legend= c("Markowitz efficient frontier","resampled efficient frontier"))
 
-#weights across the frontier
+#weights by asset across the frontier (transition map)
 cum_ave_w<-apply(aveweight,1,cumsum)
 
 #Graph
