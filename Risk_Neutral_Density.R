@@ -260,6 +260,11 @@ DNR<-function(x){
                  (1-x[5])*dlnorm(PX,meanlog = x[2], sdlog = x[4]) )}
 }
 
+dens<-apply(do.call(rbind,params),1,DNR)
+dens_s<-apply(dens,2,sum)
+dens<-dens/t(replicate(nrow(dens),dens_s))
+dens_rev<- apply(dens,2,rev)
+
 #Graph of risk neutral densities for Euribor futures prices
 co<-rainbow(length(matu))
 xlim<-range(PX)
@@ -274,25 +279,18 @@ for (i in 2:length(params)){
 }
 ylim<-c(0,max(unlist(ylim)))
 
-
-dens<-apply(do.call(rbind,params),1,DNR)
-dens_s<-apply(dens,2,sum)
-dens<-dens/t(replicate(nrow(dens),dens_s))
-dens_rev<- apply(dens,2,rev)
-
 series_1<-apply(replicate(length(matu),PX),2,list)
 series_2<-apply(dens,2,list)
 series<-lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unlist(series_2[[x]])))
 
-par(mar=c(7,4,4,4) + 0.1, xpd=T)
 cex<-0.8
-par(cex.axis=cex)
+par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
 plot(NA,pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=xlim,ylim=ylim*1e-4,las=1)
 mapply(lines,series,col=co)
 title(sub="3 mth Euribor future price (EUR)",adj =1,line=2)
-legend("bottom", inset = c(-0.05,-0.4), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
+legend("bottom", inset = c(-0.05,-0.45), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
-#Graph of risk neutral densities for Euribor rates
+#Graph of risk neutral densities for Euribor future rates
 xlim_r<-1-rev(range(PX))
 
 series_rev_1<-apply(100*replicate(length(matu),1-rev(PX)),2,list)
@@ -300,15 +298,13 @@ series_rev_2<-apply(dens_rev,2,list)
 series_rev<-lapply(seq_along(series_rev_1),
                    function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_rev_2[[x]])))
 
-cex<-0.8
 par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-plot(NA, pch=20,xlab="",ylab="frequency",xlim=100*xlim_r,ylim=ylim*1e-4,las=1,main="RNDs from a mixture of 2 lognormals")
+plot(NA, pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=100*xlim_r,ylim=ylim*1e-4,las=1)
 mapply(lines,series_rev,col=co)
 title(sub="3 mth Euribor future rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.45), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
-
-#cumulative density function
+#Cumulative density function
 CDF<-function(x){
   if(length(which(!is.na(params[[i]])))!=5){
     return(x[7]*plnorm(PX,meanlog = x[1], sdlog = x[4])+
@@ -317,11 +313,10 @@ CDF<-function(x){
   else {return(x[5]*plnorm(PX,meanlog = x[1], sdlog = x[3])+(1-x[5])*plnorm(PX,meanlog = x[2], sdlog = x[4])  )}
 }  
 
-#Graph of cumulative density functions for rates
+#Graph of cumulative density functions for Euribor future rates
 series_2_CDF<-apply(apply(do.call(rbind,params),1,CDF),2,list)
 series_CDF<-lapply(seq_along(series_1), function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_2_CDF[[x]])))
 
-cex<-0.8
 par(mar=c(8,6,4,4) + 0.1, xpd=T, cex.axis=cex)
 plot(NA, pch=20,xlab="",ylab="frequency",las=1,main="RNDs from a mixture of 2 lognormals",xlim=xlim_r,ylim=0:1)
 mapply(lines,series_CDF,col=co)
