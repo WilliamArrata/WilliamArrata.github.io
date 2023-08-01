@@ -57,7 +57,7 @@ CALLE_M<-function(x,KC){
   d2C<-(x[1]-log(KC))/x[3]   # d2C<-d1C-x[3]
   d3C<-(x[2]+x[4]^2-log(KC))/x[4]
   d4C<-(x[2]-log(KC))/x[4]   # d4C<-d1C-x[4]
-  CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C) #by default, Mean=0, sd=1 in pnorm
+  CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)
   CALL2<-exp(-r*T)*exp(x[2]+(x[3]^2/2))*pnorm(d3C)-exp(-r*T)*KC*pnorm(d4C)
   CALLE_M<-x[5]*CALL1+(1-x[5])*CALL2
   return(CALLE_M)
@@ -105,11 +105,11 @@ for (m in 1:length(terms)){
   T<-terms[m]                                     #maturity m
   r<-rates_n[m]                                   #discount rate for maturity m
   prices<-options[mat[m]:mat[m+1],c(1,2,4)]       #prices of options for maturity m
-  prices<-na.omit(apply(prices,2,as.numeric))
+  prices<-na.omit(apply(prices,2,as.numeric))/100
   C<-prices[,2]                                   #prices of calls
   P<-prices[,3]                                   #prices of puts
   KC<-KP<-prices[,1]                              #strikes of puts and calls
-  FWD<-fut[m,2]                                   #future price for maturity m
+  FWD<-fut[m,2]/100                               #future price for maturity m
   
   #1st optimization over 5 parameters to get their initial values
   PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
@@ -198,11 +198,11 @@ objective<-function(x){
 for (m in 1:length(terms)){
   
   prices<-options[mat[m]:mat[m+1],c(1,4,8)]
-  prices<-na.omit(apply(prices,2,as.numeric))
+  prices<-na.omit(apply(prices,2,as.numeric))/100
   C<-prices[,2]                                   #prices of calls, expressed in % of par, so not to be divided by 100
   P<-prices[,3]                                   #prices of puts
   KC<-KP<-prices[,1]                              #strikes of puts and calls
-  FWD<-fut[m,2]
+  FWD<-fut[m,2]/100
   T<-terms[m]
   r<-rates_n[m]
   
@@ -247,8 +247,8 @@ for (m in 1:length(terms)){
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
-range_px<-c(0.98,1.02)*range(as.numeric(options$`call strike`),na.rm=T)
-PX<-seq(range_px[1],range_px[2],0.0001)                               #prices to compute PDF and CDF
+range_px<-c(0.98,1.02)/100*range(as.numeric(options$`call strike`),na.rm=T)
+PX<-seq(range_px[1],range_px[2],10e-5)                               #prices to compute PDF and CDF
 
 #Density function
 DNR<-function(x){
@@ -274,29 +274,35 @@ for (i in 2:length(params)){
 }
 ylim<-c(0,max(unlist(ylim)))
 
+
+dens<-apply(do.call(rbind,params),1,DNR)
+dens_s<-apply(dens,2,sum)
+dens<-dens/t(replicate(nrow(dens),dens_s))
+dens_rev<- apply(dens,2,rev)
+
 series_1<-apply(replicate(length(matu),PX),2,list)
-series_2<-apply(apply(do.call(rbind,params),1,DNR),2,list)
+series_2<-apply(dens,2,list)
 series<-lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unlist(series_2[[x]])))
 
 par(mar=c(7,4,4,4) + 0.1, xpd=T)
 cex<-0.8
 par(cex.axis=cex)
-plot(NA,pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=xlim,ylim=ylim,las=1)
+plot(NA,pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=xlim,ylim=ylim*1e-4,las=1)
 mapply(lines,series,col=co)
 title(sub="3 mth Euribor future price (EUR)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.4), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
 #Graph of risk neutral densities for Euribor rates
-xlim_r<-100-rev(range(PX))
+xlim_r<-1-rev(range(PX))
 
-series_rev_1<-apply(replicate(length(matu),100-rev(PX)),2,list)
-series_rev_2<-apply(apply(apply(do.call(rbind,params),1,DNR),2,rev),2,list)
+series_rev_1<-apply(100*replicate(length(matu),1-rev(PX)),2,list)
+series_rev_2<-apply(dens_rev,2,list)
 series_rev<-lapply(seq_along(series_rev_1),
                    function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_rev_2[[x]])))
 
 cex<-0.8
 par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-plot(NA, pch=20,xlab="",ylab="frequency",xlim=xlim_r,ylim=ylim,las=1,main="RNDs from a mixture of 2 lognormals")
+plot(NA, pch=20,xlab="",ylab="frequency",xlim=100*xlim_r,ylim=ylim*1e-4,las=1,main="RNDs from a mixture of 2 lognormals")
 mapply(lines,series_rev,col=co)
 title(sub="3 mth Euribor future rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.45), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
@@ -322,12 +328,11 @@ mapply(lines,series_CDF,col=co)
 title(sub="3 mth Euribor rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.5), legend = word(matu,1), ncol=5,col=co, lty = 1, bty = "n")
 
-#mean, variance, skewness and kurtosis ofr each density
-dens<-apply(do.call(rbind,params),1,DNR)
-E_y<-colSums(dens*(100-rev(PX)))/colSums(dens)
-VA_y<-colSums(dens*(100-rev(PX)-E_y)^2)/colSums(dens)
-SK_y<-colSums(dens*((100-rev(PX)-E_y)/sqrt(VA_y))^3)/colSums(dens)
-KU_y<-colSums(dens*((100-rev(PX)-E_y)/sqrt(VA_y))^4)/colSums(dens)
+#mean, standard deviation, skewness and kurtosis for each density
+E_y<-1-colSums(dens*PX)
+sd_y<-sqrt(colSums(dens_rev*(1-rev(PX)-E_y)^2))
+SK_y<-colSums(dens_rev*((1-rev(PX)-E_y)/sd_y)^3)
+KU_y<-colSums(dens_rev*((1-rev(PX)-E_y)/sd_y)^4)
 
 #main quantiles
 quantiles<-list()
