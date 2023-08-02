@@ -47,7 +47,6 @@ lines(graph[,c(1,3)], col=col[2])
 title(xlab="strike price (EUR)",adj=1)
 legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.25),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
-
 ###############################  CALIBRATION OF PARAMETERS  ##########################################
 
 #European call price, put price, and expected spot price for a sum of 2 lognormals
@@ -247,11 +246,11 @@ for (m in 1:length(terms)){
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
-range_px<-c(0.98,1.02)/100*range(as.numeric(options$`call strike`),na.rm=T)
-PX<-seq(range_px[1],range_px[2],10e-5)                               #prices to compute PDF and CDF
+range_px<-c(0.85,1.15)*range(as.numeric(options$`call strike`),na.rm=T)/100     #range of strike prices widened
+PX<-seq(range_px[1],range_px[2],10e-5)                                          #prices to compute PDF and CDF
 
 #Density function
-DNR<-function(x){
+PDF<-function(x){
   if(length(which(!is.na(params[[i]])))!=5){
     return(x[7]*dlnorm(PX,meanlog = x[1], sdlog = x[4])+
              x[8]*dlnorm(PX,meanlog = x[2], sdlog = x[5])+
@@ -260,14 +259,9 @@ DNR<-function(x){
                  (1-x[5])*dlnorm(PX,meanlog = x[2], sdlog = x[4]) )}
 }
 
-dens<-apply(do.call(rbind,params),1,DNR)
-dens_s<-apply(dens,2,sum)
-dens<-dens/t(replicate(nrow(dens),dens_s))
-dens_rev<- apply(dens,2,rev)
-
 #Graph of risk neutral densities for Euribor futures prices
 co<-rainbow(length(matu))
-xlim<-range(PX)
+xlim<-c(1.15,0.89)*range(PX)                    #range of prices reduced for graphical representation
 ylim<-list()
 for (i in 2:length(params)){
   if(length(which(!is.na(params[[i]])))!=5){
@@ -279,42 +273,46 @@ for (i in 2:length(params)){
 }
 ylim<-c(0,max(unlist(ylim)))
 
-series_1<-apply(replicate(length(matu),PX),2,list)
-series_2<-apply(dens,2,list)
+DNR<-apply(do.call(rbind,params),1,PDF)
+colSums(apply(DNR,2,rollmean,2)*diff(PX))    #check that integral of PDF*dPX is worth 1
+DNR_rev<- apply(DNR,2,rev)
+
+series_1<-apply(replicate(length(matu),PX[PX>=xlim[1]&PX<=xlim[2]]),2,list)
+series_2<-apply(DNR[PX>=xlim[1]&PX<=xlim[2],],2,list)
 series<-lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unlist(series_2[[x]])))
 
 cex<-0.8
-par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-plot(NA,pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=xlim,ylim=ylim*1e-4,las=1)
+par(mar=c(8,6,4,4) + 0.1, xpd=T, cex.axis=cex)
+plot(NA,pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=xlim,ylim=ylim,las=1)
 mapply(lines,series,col=co)
 title(sub="3 mth Euribor future price (EUR)",adj =1,line=2)
-legend("bottom", inset = c(-0.05,-0.45), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
+legend("bottom", inset = c(-0.05,-0.4), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
-#Graph of risk neutral densities for Euribor future rates
-xlim_r<-1-rev(range(PX))
+#Graph of risk neutral densities for Euribor rates
+xlim_r<-100*(1-rev(xlim))                                                 #multiply by 100 to display percentages
 
-series_rev_1<-apply(100*replicate(length(matu),1-rev(PX)),2,list)
-series_rev_2<-apply(dens_rev,2,list)
+series_rev_1<-apply(100*replicate(length(matu),1-rev(PX[PX>=xlim_r[1]&PX<=xlim_r[2]])),2,list) #multiply by 100 again
+series_rev_2<-apply(DNR_rev[PX>=xlim_r[1]&PX<=xlim_r[2],],2,list)
 series_rev<-lapply(seq_along(series_rev_1),
                    function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_rev_2[[x]])))
 
 par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-plot(NA, pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=100*xlim_r,ylim=ylim*1e-4,las=1)
+plot(NA, pch=20,xlab="",ylab="frequency",xlim=xlim_r,ylim=ylim,las=1,main="RNDs from a mixture of 2 lognormals")
 mapply(lines,series_rev,col=co)
 title(sub="3 mth Euribor future rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.45), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
-#Cumulative density function
+#cumulative density function
 CDF<-function(x){
   if(length(which(!is.na(params[[i]])))!=5){
     return(x[7]*plnorm(PX,meanlog = x[1], sdlog = x[4])+
              x[8]*plnorm(PX,meanlog = x[2], sdlog = x[5])+
              (1-x[7]-x[8])*plnorm(PX,meanlog = x[3], sdlog = x[6]))}
-  else {return(x[5]*plnorm(PX,meanlog = x[1], sdlog = x[3])+(1-x[5])*plnorm(PX,meanlog = x[2], sdlog = x[4])  )}
+  else {return(x[5]*plnorm(PX,meanlog = x[1], sdlog = x[3])+(1-x[5])*plnorm(PX,meanlog = x[2], sdlog = x[4]))}
 }  
 
-#Graph of cumulative density functions for Euribor future rates
-series_2_CDF<-apply(apply(do.call(rbind,params),1,CDF),2,list)
+#Graph of cumulative density functions for rates
+series_2_CDF<-apply(apply(do.call(rbind,params),1,CDF)[PX>=xlim_r[1]&PX<=xlim_r[2],],2,list)
 series_CDF<-lapply(seq_along(series_1), function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_2_CDF[[x]])))
 
 par(mar=c(8,6,4,4) + 0.1, xpd=T, cex.axis=cex)
@@ -324,12 +322,13 @@ title(sub="3 mth Euribor rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.5), legend = word(matu,1), ncol=5,col=co, lty = 1, bty = "n")
 
 #mean, standard deviation, skewness and kurtosis for each density
-E_y<-1-colSums(dens*PX)
-sd_y<-sqrt(colSums(dens_rev*(1-rev(PX)-E_y)^2))
-SK_y<-colSums(dens_rev*((1-rev(PX)-E_y)/sd_y)^3)
-KU_y<-colSums(dens_rev*((1-rev(PX)-E_y)/sd_y)^4)
+E_y<-colSums(apply((1-rev(PX))*DNR_rev,2,rollmean,k=2)*rev(diff(PX)))
+dist_mean<-replicate(length(matu),1-rev(PX))-t(replicate(nrow(DNR_rev),E_y))
+SD_y<-sqrt(colSums(apply(dist_mean^2*DNR_rev,2,rollmean,k=2)*rev(diff(PX))))
+SK_y<-colSums(apply(dist_mean^3*DNR_rev,2,rollmean,k=2)*rev(diff(PX)))/SD_y^3
+KU_y<-colSums(apply(dist_mean^4*DNR_rev,2,rollmean,k=2)*rev(diff(PX)))/SD_y^4
 
-#main quantiles
+#a few quantiles
 quantiles<-list()
 for (i in 1:length(matu)){
   q99<-(PX[min(which(CDF(params[[i]])>0.98))]+PX[max(which(CDF(params[[i]])<1))])/2
@@ -342,5 +341,5 @@ for (i in 1:length(matu)){
   q01<-(PX[min(which(CDF(params[[i]])>0))]+PX[max(which(CDF(params[[i]])<0.02))])/2
   quantiles[[i]]<-c(q99,q95,q75,q50,q25,q05,q01)}
 
-quant<-cbind(terms,100-do.call(rbind,quantiles))
-colnames(quant)[-1]<-paste0("q",c("99","95","75","50","25","05","01"))
+quant<-cbind(terms,1-do.call(rbind,quantiles))
+colnames(quant)[-1]<-paste0("q",c("01","05","25","50","75","95","99"))
