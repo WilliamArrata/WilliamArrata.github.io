@@ -1,5 +1,5 @@
 require("pacman")
-pacman::p_load("stringr","Hmisc","stats","readxl","data.table")
+pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo")
 
 ##########################################   DOWNLOAD DATA    ##########################################
 
@@ -16,22 +16,6 @@ matu<-word(options$`call strike`[mat],1,3)                    #the associated op
 terms<-as.numeric(gsub('[^0-9.-]','',word(matu,2)))/365       
 mat<-c(mat,nrow(options))                                     #add one last term to mat for the loop
 
-#2. Futures prices for each option maturity
-fut<-as.data.frame(do.call(rbind,strsplit(word(options$`call strike`[nchar(options$`call strike`)>20],-2,-1)," ")))
-fut[,2]<-as.numeric(fut[,2])
-
-#3. Generic rates
-rates<-as.data.frame(read_excel("inputs/EUR_rates.xlsx"))        #taux d'actualisation des prix d'options
-rates<-as.data.frame(apply(rates,2,as.numeric))
-rates<-rates[!is.na(rates$Yield),]
-
-#get by extrapolation a risk free rate for each option maturity
-rates_n<-list()
-for (i in 1:length(terms)){
-  rates_n[[i]]<-approxExtrap(rates$term, rates$Yield, xout=terms[i], method = "linear",
-                             n = 50, rule = 2, f = 0, ties = "ordered", na.rm = FALSE)$y}
-rates_n<-unlist(rates_n)/100
-
 #graph option prices for the most remote maturity
 graph<-cbind(options$`call strike`,options$`call price`, options$`put price`)
 graph<-apply(graph,2,as.numeric)
@@ -47,17 +31,33 @@ lines(graph[,c(1,3)], col=col[2])
 title(xlab="strike price (EUR)",adj=1)
 legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.25),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
+#2. Futures prices at options' maturities
+fut<-as.data.frame(do.call(rbind,strsplit(word(options$`call strike`[nchar(options$`call strike`)>20],-2,-1)," ")))
+fut[,2]<-as.numeric(fut[,2])
+
+#3. Riskfree rates at options' maturities
+rates<-as.data.frame(read_excel("inputs/EUR_rates.xlsx"))        #taux d'actualisation des prix d'options
+rates<-as.data.frame(apply(rates,2,as.numeric))
+rates<-rates[!is.na(rates$Yield),]
+
+#get by extrapolation a risk free rate for each option maturity
+rates_n<-list()
+for (i in 1:length(terms)){
+  rates_n[[i]]<-approxExtrap(rates$term, rates$Yield, xout=terms[i], method = "linear",
+                             n = 50, rule = 2, f = 0, ties = "ordered", na.rm = FALSE)$y}
+rates_n<-unlist(rates_n)/100
+
 ###############################  CALIBRATION OF PARAMETERS  ##########################################
 
-#European call price, put price, and expected spot price for a sum of 2 lognormals
+#European call price, put price, and expected spot price for a sum of 2 lognormals in the Black & Scholes model
 #r,T,FWD ne sont pas déclarés comme variables car pour chaque terme dans la boucle ils sont fixes
 CALLE_M<-function(x,KC){
-  d1C<-(x[1]+x[3]^2-log(KC))/x[3]
-  d2C<-(x[1]-log(KC))/x[3]   # d2C<-d1C-x[3]
-  d3C<-(x[2]+x[4]^2-log(KC))/x[4]
-  d4C<-(x[2]-log(KC))/x[4]   # d4C<-d1C-x[4]
-  CALL1<-exp(-r*T)*exp(x[1]+(x[3]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)
-  CALL2<-exp(-r*T)*exp(x[2]+(x[3]^2/2))*pnorm(d3C)-exp(-r*T)*KC*pnorm(d4C)
+  d1_C<-(x[1]+x[3]^2-log(KC))/x[3]
+  d2_C<-(x[1]-log(KC))/x[3]   # d2_C<-d1_C-x[3]
+  d3_C<-(x[2]+x[4]^2-log(KC))/x[4]
+  d4_C<-(x[2]-log(KC))/x[4]   # d4_C<-d1_C-x[4]
+  CALL1<-exp(-r*T)*(exp(x[1]+(x[3]^2/2))*pnorm(d1_C)-KC*pnorm(d2_C))
+  CALL2<-exp(-r*T)*(exp(x[2]+(x[4]^2/2))*pnorm(d3_C)-KC*pnorm(d4_C))
   CALLE_M<-x[5]*CALL1+(1-x[5])*CALL2
   return(CALLE_M)
 }
@@ -72,24 +72,24 @@ ESP_M<-function(x){                           #expected value for a lognormal di
 
 #Function to minimize for 7 parameters
 MSE<-function(x){
-  CINF<-pmax(ESP_M(x)-KC,CALLE_M(x,KC))
-  CSUP<-exp(r*T)*CALLE_M(x,KC)
-  PINF<-pmax(KP-ESP_M(x),PUTE_M(x,KP))
-  PSUP<-exp(r*T)*PUTE_M(x,KP)
+  C_INF<-pmax(ESP_M(x)-KC,CALLE_M(x,KC))
+  C_SUP<-exp(r*T)*CALLE_M(x,KC)
+  P_INF<-pmax(KP-ESP_M(x),PUTE_M(x,KP))
+  P_SUP<-exp(r*T)*PUTE_M(x,KP)
   A<-as.numeric(KC<=ESP_M(x))
   B<-as.numeric(KP>=ESP_M(x))
-  wcall<-A*x[6]+(1-A)*x[7]
-  wput<-B*x[6]+(1-B)*x[7]
-  CALL<-wcall*CINF+(1-wcall)*CSUP
-  PUT<-wput*PINF+(1-wput)*PSUP
-  RESC<-sum((C-CALL)^2, na.rm=T)
-  RESP<-sum((P-PUT)^2, na.rm=T)
-  RESF<-(FWD-ESP_M(x))^2
-  MSE<-RESC+RESP+RESF
+  w_call<-A*x[6]+(1-A)*x[7]
+  w_put<-B*x[6]+(1-B)*x[7]
+  CALL<-w_call*C_INF+(1-w_call)*C_SUP
+  PUT<-w_put*P_INF+(1-w_put)*P_SUP
+  RES_C<-sum((C-CALL)^2, na.rm=T)
+  RES_P<-sum((P-PUT)^2, na.rm=T)
+  RES_F<-(FWD-ESP_M(x))^2
+  MSE<-RES_C+RES_P+RES_F
   return(MSE)
 }
 
-#Function to minimize for the first 5 parameters, to find their initial values (weights held fixed)
+#weights on itm and otm options fixed for the moment at 0.5 each thus 1st optim on first 5 parameters
 PR<-seq(0.1,0.49,0.01)
 
 objective<-function(x){
@@ -110,12 +110,12 @@ for (m in 1:length(terms)){
   KC<-KP<-prices[,1]                              #strikes of puts and calls
   FWD<-fut[m,2]/100                               #future price for maturity m
   
-  #1st optimization over 5 parameters to get their initial values
+  #1st optimization over 6 parameters to get initialization values for second optim
   PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
                  list(c(),c(paste0("m",seq(2)),paste0("s",seq(2)),"p",paste0("w",seq(2)),"SCE")))
-  start<-c(log(FWD),log(FWD),0.2,0.2)
-  lower<-c(-10,-10,0.000001,0.000001)
-  upper<-c(10,10,0.9,0.9)
+  start<-rep(c(log(FWD),0.2),each=2)
+  lower<-rep(c(-10,1e-6),each=2)
+  upper<-rep(c(10,0.9),each=2)
   
   for (i in 1:length(PR)){
     sol<-nlminb(start=start,objective=objective,lower=lower, upper = upper, control=list(iter.max=500))
@@ -127,33 +127,35 @@ for (m in 1:length(terms)){
   
   param<-PARA[which.min(PARA[,8]),-8]
   
-  #2nd optimization over 7 parameters
-  L<-c(-4,-4,0,0,0,0,0)
-  U<-c(8,8,1,1,0.5,1,1)
+  #2nd optimization over 8 parameters
+  param[param==0]<-1e-6
+  
+  L<-U<-rep(0,length(param))
+  L[sign(param)==-1]<-2*param[sign(param)==-1]
+  L[sign(param)==1]<-1e-2*param[sign(param)==1]
+  U[sign(param)==-1]<-1e-2*param[sign(param)==-1]
+  U[sign(param)==1]<-2*param[sign(param)==1]
   CI<-c(L,-U)
-  UI<-rbind(diag(7),-diag(7))
+  UI<-rbind(diag(length(L)),-diag(length(L)))
   
   solu<-constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$par
+  
   CV[[m]]<-constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$convergence
   
-  params[[m]]<-c(log(FWD)+(solu[1]-log(FWD))/T,
-                 log(FWD)+(solu[2]-log(FWD))/T,
-                 solu[3]*sqrt(1/T),
-                 solu[4]*sqrt(1/T),
-                 solu[5])
+  params[[m]]<-c(log(FWD)+(solu[1:2]-log(FWD))/T, solu[3:4]/sqrt(T), solu[5])
 }
 
-#European call price, put price, and expected spot price for a sum of 3 lognormals
+#European call price, put price, and expected spot price for a sum of 3 lognormals in the Black & Scholes model
 CALLE_M<-function(x,KC){
-  d1C<-(x[1]+x[4]^2-log(KC))/x[4]
-  d2C<-(x[1]-log(KC))/x[4]   # d2C<-d1C-x[3]
-  d3C<-(x[2]+x[5]^2-log(KC))/x[5]
-  d4C<-(x[2]-log(KC))/x[5]   # d4C<-d1C-x[4]
-  d5C<-(x[3]+x[6]^2-log(KC))/x[6]
-  d6C<-(x[3]-log(KC))/x[6]   # d4C<-d1C-x[4]
-  CALL1<-exp(-r*T)*exp(x[1]+(x[4]^2/2))*pnorm(d1C)-exp(-r*T)*KC*pnorm(d2C)
-  CALL2<-exp(-r*T)*exp(x[2]+(x[5]^2/2))*pnorm(d3C)-exp(-r*T)*KC*pnorm(d4C)
-  CALL3<-exp(-r*T)*exp(x[3]+(x[6]^2/2))*pnorm(d5C)-exp(-r*T)*KC*pnorm(d6C)
+  d1_C<-(x[1]+x[4]^2-log(KC))/x[4]
+  d2_C<-(x[1]-log(KC))/x[4]   # d2_C<-d1_C-x[4]
+  d3_C<-(x[2]+x[5]^2-log(KC))/x[5]
+  d4_C<-(x[2]-log(KC))/x[5]   # d4_C<-d3_C-x[5]
+  d5_C<-(x[3]+x[6]^2-log(KC))/x[6]
+  d6_C<-(x[3]-log(KC))/x[6]   # d6_C<-d5_C-x[6]
+  CALL1<-exp(-r*T)*(exp(x[1]+(x[4]^2/2))*pnorm(d1_C)-KC*pnorm(d2_C))
+  CALL2<-exp(-r*T)*(exp(x[2]+(x[5]^2/2))*pnorm(d3_C)-KC*pnorm(d4_C))
+  CALL3<-exp(-r*T)*(exp(x[3]+(x[6]^2/2))*pnorm(d5_C)-KC*pnorm(d6_C))
   CALLE_M<-x[7]*CALL1+x[8]*CALL2+(1-x[7]-x[8])*CALL3
   return(CALLE_M)
 }
@@ -165,26 +167,27 @@ PUTE_M<-function(x,KP){
 ESP_M<-function(x){
   ESP_M<-x[7]*exp(x[1]+(x[4]^2/2))+x[8]*exp(x[2]+(x[5]^2/2))+(1-x[7]-x[8])*exp(x[3]+(x[6]^2/2))
   return(ESP_M)}
-#function to minimize over 9 parameters
+
+#function to minimize over 10 parameters
 MSE<-function(x){
-  CINF<-pmax(ESP_M(x)-KC,CALLE_M(x,KC))
-  CSUP<-exp(r*T)*CALLE_M(x,KC)
-  PINF<-pmax(KP-ESP_M(x),PUTE_M(x,KP))
-  PSUP<-exp(r*T)*PUTE_M(x,KP)
+  C_INF<-pmax(ESP_M(x)-KC,CALLE_M(x,KC))
+  C_SUP<-exp(r*T)*CALLE_M(x,KC)
+  P_INF<-pmax(KP-ESP_M(x),PUTE_M(x,KP))
+  P_SUP<-exp(r*T)*PUTE_M(x,KP)
   A<-as.numeric(KC<=ESP_M(x))
   B<-as.numeric(KP>=ESP_M(x))
-  wcall<-A*x[9]+(1-A)*x[10]
-  wput<-B*x[9]+(1-B)*x[10]
-  CALL<-wcall*CINF+(1-wcall)*CSUP
-  PUT<-wput*PINF+(1-wput)*PSUP
-  RESC<-sum((C-CALL)^2, na.rm=T)
-  RESP<-sum((P-PUT)^2, na.rm=T)
-  RESF<-(FWD-ESP_M(x))^2
-  MSE<-RESC+RESP+RESF
+  w_call<-A*x[9]+(1-A)*x[10]
+  w_put<-B*x[9]+(1-B)*x[10]
+  CALL<-w_call*C_INF+(1-w_call)*C_SUP
+  PUT<-w_put*P_INF+(1-w_put)*P_SUP
+  RES_C<-sum((C-CALL)^2, na.rm=T)
+  RES_P<-sum((P-PUT)^2, na.rm=T)
+  RES_F<-(FWD-ESP_M(x))^2
+  MSE<-RES_C+RES_P+RES_F
   return(MSE)
 }
 
-#fonction à minimiser sur 7 paramètres seulement pour le moment
+#weights on itm and otm options fixed for the moment at 0.5 each thus 1st optim on 8 parameters
 PR<-seq(0.1,1,0.01)                  #possible weights on the first two lognormals
 PR<-expand.grid(c(rep(list(PR),2)))
 PR<-PR[rowSums(PR)<0.9,]
@@ -193,10 +196,12 @@ objective<-function(x){
   objective<-MSE(c(x[1:6],PR[i,1],PR[i,2],0.5,0.5))
 }
 
+params<-CV<-list()
+
 #optimization
 for (m in 1:length(terms)){
   
-  prices<-options[mat[m]:mat[m+1],c(1,4,8)]
+  prices<-options[mat[m]:mat[m+1],c(1,2,4)]
   prices<-na.omit(apply(prices,2,as.numeric))/100
   C<-prices[,2]                                   #prices of calls, expressed in % of par, so not to be divided by 100
   P<-prices[,3]                                   #prices of puts
@@ -205,12 +210,12 @@ for (m in 1:length(terms)){
   T<-terms[m]
   r<-rates_n[m]
   
-  #first optimization on 5 parameter
-  PARA<-matrix(nrow=length(PR),ncol=12,dimnames=
+  ##Thus 1st optimization over first 8 parameters to get initialization values for second optim
+  PARA<-matrix(nrow=nrow(PR),ncol=12,dimnames=
                  list(c(),c(paste0("m",seq(3)),paste0("s",seq(3)),paste0("p",seq(2)),paste0("w",seq(2)),"p1+p2","SCE")))
-  lower<-c(-10,-10,-10,0.000001,0.000001,0.000001)
-  upper<-c(10,10,10,0.8,0.8,0.8)
-  start<-c(log(FWD),log(FWD),log(FWD),0.2,0.2,0.2)
+  lower<-rep(c(-10,1e-6),each=3)
+  upper<-rep(c(10,0.8),each=3)
+  start<-rep(c(log(FWD),0.2),each=3)
   
   for (i in 1:nrow(PR)){
     sol<-nlminb(start=start,objective=objective,lower=lower, upper = upper, control=list(iter.max=500))
@@ -224,75 +229,63 @@ for (m in 1:length(terms)){
   
   param<-PARA[which.min(PARA[,12]),-12]
   
-  L<-c(0,0,0,0,0,0,0,0,0,0,0)
-  U<-c(8,8,8,0.7,0.7,0.7,1,1,1,1,1)
+  #2nd optimization over 10 parameters
+  param[param==0]<-1e-6
+  
+  L<-U<-rep(0,length(param))
+  L[sign(param)==-1]<-2*param[sign(param)==-1]
+  L[sign(param)==1]<-1e-2*param[sign(param)==1]
+  U[sign(param)==-1]<-1e-2*param[sign(param)==-1]
+  U[sign(param)==1]<-2*param[sign(param)==1]
   CI<-c(L,-U)
-  UI<-rbind(diag(11),-diag(11))
+  UI<-rbind(diag(length(L)),-diag(length(L)))
   
   solu<-constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$par
   
   CV[[m]]<-constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$convergence
   
-  params[[m]]<-c(log(FWD)+(solu[1]-log(FWD))/T,
-                 log(FWD)+(solu[2]-log(FWD))/T,
-                 log(FWD)+(solu[3]-log(FWD))/T,
-                 solu[4]*sqrt(1/T),
-                 solu[5]*sqrt(1/T),
-                 solu[6]*sqrt(1/T),
-                 solu[7],
-                 solu[8])
+  params[[m]]<-c(log(FWD)+(solu[1:3]-log(FWD))/T, solu[4:6]/sqrt(T), solu[7:8])
 }
+
 
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
-range_px<-c(0.85,1.15)*range(as.numeric(options$`call strike`),na.rm=T)/100     #range of strike prices widened
-PX<-seq(range_px[1],range_px[2],10e-5)                                          #prices to compute PDF and CDF
+range_px<-range(as.numeric(options$`call strike`),na.rm=T)/100
+PX<-seq(range_px[1],range_px[2],10e-5)                                  #prices to compute PDF and CDF
+params<-do.call(rbind,params)
 
-#Density function
+#Probability Density Function for any maturity for a sum of 2 or 3 lognormals
 PDF<-function(x){
-  if(length(which(!is.na(params[[i]])))!=5){
-    return(x[7]*dlnorm(PX,meanlog = x[1], sdlog = x[4])+
-             x[8]*dlnorm(PX,meanlog = x[2], sdlog = x[5])+
-             (1-x[7]-x[8])*dlnorm(PX,meanlog = x[3], sdlog = x[6]))}
-  else {return(x[5]*dlnorm(PX,meanlog = x[1], sdlog = x[3])+
-                 (1-x[5])*dlnorm(PX,meanlog = x[2], sdlog = x[4]) )}
+  if(ncol(params)!=5){
+    return(x[7]*dlnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*dlnorm(PX,meanlog=x[2], sdlog=x[5])+
+             (1-x[7]-x[8])*dlnorm(PX,meanlog=x[3], sdlog=x[6]))}
+  else {return(x[5]*dlnorm(PX,meanlog=x[1], sdlog=x[3]) + (1-x[5])*dlnorm(PX,meanlog=x[2], sdlog=x[4]))}
 }
+
+DNR<-apply(params,1,PDF)
+colSums(apply(DNR,2,rollmean,2)*diff(PX))    #check that integral of PDF*dPX is worth 1
 
 #Graph of risk neutral densities for Euribor futures prices
 co<-rainbow(length(matu))
-xlim<-c(1.15,0.89)*range(PX)                    #range of prices reduced for graphical representation
-ylim<-list()
-for (i in 2:length(params)){
-  if(length(which(!is.na(params[[i]])))!=5){
-    ylim[[i]]<-round(params[[i]][7])*max(dlnorm(PX,meanlog = params[[i]][1], sdlog = params[[i]][4]))+
-      round(params[[i]][8])*max(dlnorm(PX,meanlog = params[[i]][2], sdlog = params[[i]][5]))
-    (1-round(params[[i]][7])-round(params[[i]][8]))*max(dlnorm(PX,meanlog = params[[i]][3], sdlog = params[[i]][6]))}
-  else {ylim[[i]]<-round(params[[i]][5])*max(dlnorm(PX,meanlog = params[[i]][1], sdlog = params[[i]][3]))+
-    (1-round(params[[i]][5]))*max(dlnorm(PX,meanlog = params[[i]][2], sdlog = params[[i]][4]))}
-}
-ylim<-c(0,max(unlist(ylim)))
-
-DNR<-apply(do.call(rbind,params),1,PDF)
-colSums(apply(DNR,2,rollmean,2)*diff(PX))    #check that integral of PDF*dPX is worth 1
-DNR_rev<- apply(DNR,2,rev)
-
-series_1<-apply(replicate(length(matu),PX[PX>=xlim[1]&PX<=xlim[2]]),2,list)
-series_2<-apply(DNR[PX>=xlim[1]&PX<=xlim[2],],2,list)
+xlim<-range(PX)
+ylim<-range(DNR)
+series_1<-apply(replicate(length(matu),PX),2,list)
+series_2<-apply(DNR,2,list)
 series<-lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unlist(series_2[[x]])))
 
 cex<-0.8
-par(mar=c(8,6,4,4) + 0.1, xpd=T, cex.axis=cex)
+par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
 plot(NA,pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=xlim,ylim=ylim,las=1)
 mapply(lines,series,col=co)
 title(sub="3 mth Euribor future price (EUR)",adj =1,line=2)
-legend("bottom", inset = c(-0.05,-0.4), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
+legend("bottom", inset=c(-0.05,-0.4), legend=word(matu,1), ncol=6,col=co, lty=1, bty="n")
 
 #Graph of risk neutral densities for Euribor rates
-xlim_r<-100*(1-rev(xlim))                                                 #multiply by 100 to display percentages
-
-series_rev_1<-apply(100*replicate(length(matu),1-rev(PX[PX>=xlim_r[1]&PX<=xlim_r[2]])),2,list) #multiply by 100 again
-series_rev_2<-apply(DNR_rev[PX>=xlim_r[1]&PX<=xlim_r[2],],2,list)
+DNR_rev<-apply(DNR,2,rev)                  #rates density values are the reverse of price density values
+xlim_r<-100*(1-rev(xlim))                   #rates as a function of prices; multiply by 100 to display percentages
+series_rev_1<-apply(100*replicate(length(matu),1-rev(PX)),2,list)         #multiply by 100 again
+series_rev_2<-apply(DNR_rev,2,list)
 series_rev<-lapply(seq_along(series_rev_1),
                    function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_rev_2[[x]])))
 
@@ -302,17 +295,17 @@ mapply(lines,series_rev,col=co)
 title(sub="3 mth Euribor future rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.45), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
-#cumulative density function
+#Cumulative Density Function for any maturity for a sum of 2 or 3 lognormals
 CDF<-function(x){
-  if(length(which(!is.na(params[[i]])))!=5){
-    return(x[7]*plnorm(PX,meanlog = x[1], sdlog = x[4])+
-             x[8]*plnorm(PX,meanlog = x[2], sdlog = x[5])+
+  if(ncol(params)!=5){
+    return(x[7]*plnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*plnorm(PX,meanlog=x[2], sdlog=x[5])+
              (1-x[7]-x[8])*plnorm(PX,meanlog = x[3], sdlog = x[6]))}
-  else {return(x[5]*plnorm(PX,meanlog = x[1], sdlog = x[3])+(1-x[5])*plnorm(PX,meanlog = x[2], sdlog = x[4]))}
+  else {return(x[5]*plnorm(PX,meanlog=x[1], sdlog=x[3])+(1-x[5])*plnorm(PX,meanlog=x[2], sdlog=x[4]))}
 }  
 
 #Graph of cumulative density functions for rates
-series_2_CDF<-apply(apply(do.call(rbind,params),1,CDF)[PX>=xlim_r[1]&PX<=xlim_r[2],],2,list)
+NCDF<-apply(params,1,CDF)
+series_2_CDF<-apply(NCDF,2,list)
 series_CDF<-lapply(seq_along(series_1), function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_2_CDF[[x]])))
 
 par(mar=c(8,6,4,4) + 0.1, xpd=T, cex.axis=cex)
@@ -321,25 +314,25 @@ mapply(lines,series_CDF,col=co)
 title(sub="3 mth Euribor rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.5), legend = word(matu,1), ncol=5,col=co, lty = 1, bty = "n")
 
-#mean, standard deviation, skewness and kurtosis for each density
+#mean, standard deviation, skewness and kurtosis for the distribution at each options' maturity
 E_y<-colSums(apply((1-rev(PX))*DNR_rev,2,rollmean,k=2)*rev(diff(PX)))
 dist_mean<-replicate(length(matu),1-rev(PX))-t(replicate(nrow(DNR_rev),E_y))
-SD_y<-sqrt(colSums(apply(dist_mean^2*DNR_rev,2,rollmean,k=2)*rev(diff(PX))))
-SK_y<-colSums(apply(dist_mean^3*DNR_rev,2,rollmean,k=2)*rev(diff(PX)))/SD_y^3
-KU_y<-colSums(apply(dist_mean^4*DNR_rev,2,rollmean,k=2)*rev(diff(PX)))/SD_y^4
+moments<-function(x){
+  return(colSums(apply(dist_mean^x*DNR_rev,2,rollmean,k=2)*rev(diff(PX))))}
+SD_y<-sqrt(moments(2))
+SK_y<-moments(3)/SD_y^3
+KU_y<-moments(4)/SD_y^4
 
 #a few quantiles
+thres<-rev(c(1,5,25,50,75,95,99)/100)
 quantiles<-list()
-for (i in 1:length(matu)){
-  q99<-(PX[min(which(CDF(params[[i]])>0.98))]+PX[max(which(CDF(params[[i]])<1))])/2
-  q95<-(PX[min(which(CDF(params[[i]])>0.94))]+PX[max(which(CDF(params[[i]])<0.96))])/2
-  q75<-(PX[min(which(CDF(params[[i]])>0.74))]+PX[max(which(CDF(params[[i]])<0.76))])/2
-  q50<-(PX[min(which(CDF(params[[i]])>0.49))]+PX[max(which(CDF(params[[i]])<0.51))])/2
-  q25<-(PX[min(which(CDF(params[[i]])>0.24))]+PX[max(which(CDF(params[[i]])<0.26))])/2
-  q15<-(PX[min(which(CDF(params[[i]])>0.14))]+PX[max(which(CDF(params[[i]])<0.16))])/2
-  q05<-(PX[min(which(CDF(params[[i]])>0.04))]+PX[max(which(CDF(params[[i]])<0.06))])/2
-  q01<-(PX[min(which(CDF(params[[i]])>0))]+PX[max(which(CDF(params[[i]])<0.02))])/2
-  quantiles[[i]]<-c(q99,q95,q75,q50,q25,q05,q01)}
+for (i in 1:nrow(params)){
+  quantiles[[i]]<-list()
+  for (j in 1:length(thres)){
+    quantiles[[i]][[j]]<-mean(PX[c(min(which(NCDF[,i]>thres[j]-0.01)),max(which(NCDF[,i]<thres[j]+0.01)))]) 
+  }
+  quantiles[[i]]<-unlist(quantiles[[i]])
+}
 
-quant<-cbind(terms,1-do.call(rbind,quantiles))
-colnames(quant)[-1]<-paste0("q",c("01","05","25","50","75","95","99"))
+quantiles<-cbind(terms,1-do.call(rbind,quantiles))
+colnames(quantiles)<-c("term",rev(paste0("q",100*thres)))
