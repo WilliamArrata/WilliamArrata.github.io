@@ -247,7 +247,6 @@ for (m in 1:length(terms)){
   params[[m]]<-c(log(FWD)+(solu[1:3]-log(FWD))/T, solu[4:6]/sqrt(T), solu[7:8])
 }
 
-
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
@@ -276,7 +275,7 @@ series<-lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unl
 
 cex<-0.8
 par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-plot(NA,pch=20,xlab="",ylab="frequency",main="RNDs from a mixture of 2 lognormals",xlim=xlim,ylim=ylim,las=1)
+plot(NA,pch=20,xlab="",ylab="density",main="RNDs from a mixture of 3 lognormals",xlim=xlim,ylim=ylim,las=1)
 mapply(lines,series,col=co)
 title(sub="3 mth Euribor future price (EUR)",adj =1,line=2)
 legend("bottom", inset=c(-0.05,-0.4), legend=word(matu,1), ncol=6,col=co, lty=1, bty="n")
@@ -290,7 +289,7 @@ series_rev<-lapply(seq_along(series_rev_1),
                    function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_rev_2[[x]])))
 
 par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-plot(NA, pch=20,xlab="",ylab="frequency",xlim=xlim_r,ylim=ylim,las=1,main="RNDs from a mixture of 2 lognormals")
+plot(NA, pch=20,xlab="",ylab="density",xlim=xlim_r,ylim=ylim,las=1,main="RNDs from a mixture of 3 lognormals")
 mapply(lines,series_rev,col=co)
 title(sub="3 mth Euribor future rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.45), legend = word(matu,1), ncol=6,col=co, lty = 1, bty = "n")
@@ -309,7 +308,7 @@ series_2_CDF<-apply(NCDF,2,list)
 series_CDF<-lapply(seq_along(series_1), function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_2_CDF[[x]])))
 
 par(mar=c(8,6,4,4) + 0.1, xpd=T, cex.axis=cex)
-plot(NA, pch=20,xlab="",ylab="frequency",las=1,main="RNDs from a mixture of 2 lognormals",xlim=xlim_r,ylim=0:1)
+plot(NA, pch=20,xlab="",ylab="cumulative probability",las=1,main="RNDs from a mixture of 2 lognormals",xlim=xlim_r,ylim=0:1)
 mapply(lines,series_CDF,col=co)
 title(sub="3 mth Euribor rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.5), legend = word(matu,1), ncol=5,col=co, lty = 1, bty = "n")
