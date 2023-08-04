@@ -275,11 +275,10 @@ series<-lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unl
 
 cex<-0.8
 par(mar=c(7,4,4,4), xpd=T, cex.axis=cex)
-plot(NA, pch=20, xlab="OAT future price (% of par)",ylab="frequency",xlim=xlim,ylim=ylim,las=1,
+plot(NA, pch=20, xlab="OAT future price (% of par)",ylab="density",xlim=xlim,ylim=ylim,las=1,
      main="RNDs from a mixture of 2 lognormals")
 mapply(lines,series,col=co)
 legend("bottom", ncol=4, inset=c(-0.05,-0.4),legend = word(matu,1), col=co, bty="n", lty=1)
-
 
 #######################  CALCULATION OF ACCRUED COUPON OF CTDs AT OPTION MATURITY ###########################
 
@@ -363,7 +362,7 @@ series_1_rev<-apply(tri,2,list)
 series_rev<-lapply(seq_along(series_1_rev), function(x) cbind(100*unlist(series_1_rev[[x]]), unlist(series_2[[x]])))
 
 par(mar=c(7,4,4,4) + 0.1, xpd=T, cex.axis=cex)
-plot(NA, pch=20, xlab="OAT future yield (%)",ylab="frequency",xlim=xlim,ylim=ylim,las=1,main="RNDs from a mixture of 2 lognormals")
+plot(NA, pch=20, xlab="OAT future yield (%)",ylab="density",xlim=xlim,ylim=ylim,las=1,main="RNDs from a mixture of 2 lognormals")
 mapply(lines,series_rev,col=co)
 legend("bottom", inset = c(-0.05,-0.2), legend = word(matu,1), horiz = T, col=co, lty = 1, bty = "n")
 
@@ -382,7 +381,7 @@ series_2_CDF<-apply(NCDF_rev,2,list)
 series_CDF<-lapply(seq_along(series_1), function(x) cbind(100*unlist(rev(series_1_rev[[x]])), unlist(series_2_CDF[[x]])))
 
 par(mar=c(7,6,4,4) + 0.1, xpd=T, cex.axis=cex)
-plot(NA, pch=20,xlab="",ylab="frequency",xlim=xlim,ylim=c(0,1),las=1,main="RNDs from a mixture of 2 lognormals")
+plot(NA, pch=20,xlab="",ylab="cumulative probability",xlim=xlim,ylim=c(0,1),las=1,main="RNDs from a mixture of 2 lognormals")
 mapply(lines,series_CDF,col=co)
 title(sub="OAT future yield (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.35), legend = word(matu,1), horiz = T,col=co, lty = 1, bty = "n")
