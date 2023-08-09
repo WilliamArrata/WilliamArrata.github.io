@@ -1,8 +1,6 @@
 require("pacman")
 pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo")
 
-setwd("Z://5_Gestion_Financiere/5.1_RESU-BDF/SIMU_BDF/Stratégie 2022/CAP_juillet_2022/projections_stochastiques/EURUSD")
-
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
