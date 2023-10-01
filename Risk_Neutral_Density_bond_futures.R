@@ -399,8 +399,9 @@ thres<-rev(c(1,5,25,50,75,95,99)/100)
 quantiles<-list()
 for (i in 1:nrow(params)){
   quantiles[[i]]<-list()
-  for (j in 1:length(thres)){
-    quantiles[[i]][[j]]<-mean(PX[c(min(which(NCDF[,i]>thres[j]-0.01)),max(which(NCDF[,i]<thres[j]+0.01)))]) 
+  for (j in 1:(length(thres))){
+    quantiles[[i]][[j]]<-100*mean(tri[c(min(which(NCDF[,i]>thres[j]-0.01)),
+                                        max(which(NCDF[,i]<thres[j]+0.01))),i])
   }
   quantiles[[i]]<-unlist(quantiles[[i]])
 }
