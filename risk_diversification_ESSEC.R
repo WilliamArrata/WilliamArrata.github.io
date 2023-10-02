@@ -1,8 +1,3 @@
-
-#####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ################
-
-#######   INFLUENCE OF THE CORRELATON COEFFICIENT VALUE BETWEEN TWO ASSETS ON PORTFOLIO'S RISK   ########
-
 mu<-c(3,7)*1e-2                            #Expected returns on assets A and B
 V<-c(1.44, 6.25)*1e-2                      #Variance on assets A and B
 
@@ -13,7 +8,7 @@ rho<-c(-1,1,0,0.25)                        #different values for the correlation
 sd<-apply(cbind(V[1],replicate(2,sqrt(prod(V))*rho),V[2]),1,list)   #all covariances matrix
 pair<-list()                               
 for (i in seq_along(rho)){
-  pair[[i]]<-cbind(100*sqrt(diag(w%*%matrix(sd[[i]][[1]],nrow=2)%*%t(w))),mean)}  #portfolio coordinates
+  pair[[i]]<-cbind(100*sqrt(diag(w%*%matrix(sd[[i]][[1]],nrow=2)%*%t(w))) ,mean)}  #portfolio coordinates
 
 #Graph of the 300 portfolios in the mean standard deviation space
 xlim<-range(do.call(rbind,pair)[,1])*1.1
@@ -24,11 +19,10 @@ lty<-rep(1:2,c(length(rho)-1,1))
 par(mar=c(6, 4, 4, 3),xpd=T)
 plot(pair[[1]][c(1,length(mean)),], las=1,xlab="", ylab="",xlim=xlim, ylim=ylim,pch=20)
 mapply(lines, pair, col=colv,lty=lty)
-mapply(title, c("expected return (%)", "standard deviation (%)",expression("A","B")),
-       adj=c(0,1,0.45,0.9),line=c(-1,-16,-12,-2))
-legend("bottom", horiz=T,inset = c(0,-0.4),text.col=colv,pch=rep(NA,4),lty=rep(1,4),col=colv, bty="n",
-       legend= expression(paste(rho,"=",-1),paste(rho,"=",1),paste(rho,"=",0),paste(rho,"=",0.25)))
-
+mapply(title, c(expression(E(r[P]) ("%"),sigma(r[P]) ("%"),"A","B")),
+       adj=c(0,1,0.45,0.9),line=c(-1,-22,-18,-2))
+legend("bottom", horiz=T,inset = c(0,-0.2),text.col=colv,pch=rep(NA,4),lty=c(rep(1,3),3),col=colv, bty="n",
+       legend= expression(paste(rho[A][B]," = ",-1),paste(rho[A][B]," = ",1),paste(rho[A][B]," = ",0),paste(rho[A][B]," = ",0.25)))
 
 #######################################   COMBINING ASSET BY PAIRS   ##################################
 
