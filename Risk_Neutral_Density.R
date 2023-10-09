@@ -1,25 +1,25 @@
 require("pacman")
-pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo")
+pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo","dyplr","tidyr")
 
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
 options<-as.data.frame(read_excel("inputs/ERA_options_31_mai_2023.xlsx",1))                #upload data
-colnames(options)[c(1,5,8,12)]<-c("call strike","call price","put strike","put price")     #rename columns
-options<-options[,colnames(options)%in%c("call strike","call price","put strike","put price")]                                                   #remove columns
+options <- options %>% 
+  rename(call_price="...5",call_strike="Calls",put_strike="...8",put_price="...12") %>% 
+  select(c(call_strike,call_price,put_strike,put_price)) %>% 
+  mutate_if(is.character, ~replace_na(.,"matu"))
 
 #get options maturities
-options$`call price`[is.na(options$`call price`)]<-
-  options$`put price`[is.na(options$`put price`)]<-"matu"     #identify new series
-mat<-which(is.na(as.numeric(options$`call strike`)))[-1]      #identify lines with a new option maturity
-matu<-word(options$`call strike`[mat],1,3)                    #the associated option maturity
+mat<-which(options$call_price=="matu")                       #identify lines with a new option maturity
+matu<-word(options$call_strike[mat],1,3)                    #the associated option maturity
 terms<-as.numeric(gsub('[^0-9.-]','',word(matu,2)))/365       
-mat<-c(mat,nrow(options))                                     #add one last term to mat for the loop
 
 #graph option prices for the most remote maturity
-graph<-cbind(options$`call strike`,options$`call price`, options$`put price`)
-graph<-apply(graph,2,as.numeric)
-graph<-graph[last(which(is.na(graph[,1]))):nrow(graph),]
+graph <- options %>% 
+  select(-put_strike) %>% 
+  mutate_if(is.character, as.numeric) %>% 
+  slice((last(mat)+1):nrow(graph))
 
 cex<-0.8
 col<-c("lightblue","indianred")
@@ -32,8 +32,9 @@ title(xlab="strike price (EUR)",adj=1)
 legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.25),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
 #2. Futures prices at options' maturities
-fut<-as.data.frame(do.call(rbind,strsplit(word(options$`call strike`[nchar(options$`call strike`)>20],-2,-1)," ")))
-fut[,2]<-as.numeric(fut[,2])
+fut<-as.data.frame(do.call(rbind,strsplit(word(options$call_strike[mat],-2,-1)," ")))
+colnames(fut)<-c("matu","price")
+fut$price<-as.numeric(fut$price)
 
 #3. Riskfree rates at options' maturities
 rates<-as.data.frame(read_excel("inputs/EUR_rates.xlsx"))        #taux d'actualisation des prix d'options
@@ -53,9 +54,9 @@ rates_n<-unlist(rates_n)/100
 #r,T,FWD ne sont pas déclarés comme variables car pour chaque terme dans la boucle ils sont fixes
 CALLE_M<-function(x,KC){
   d1_C<-(x[1]+x[3]^2-log(KC))/x[3]
-  d2_C<-(x[1]-log(KC))/x[3]   # d2_C<-d1_C-x[3]
+  d2_C<-d1_C-x[3]
   d3_C<-(x[2]+x[4]^2-log(KC))/x[4]
-  d4_C<-(x[2]-log(KC))/x[4]   # d4_C<-d1_C-x[4]
+  d4_C<-d3_C-x[4]
   CALL1<-exp(-r*T)*(exp(x[1]+(x[3]^2/2))*pnorm(d1_C)-KC*pnorm(d2_C))
   CALL2<-exp(-r*T)*(exp(x[2]+(x[4]^2/2))*pnorm(d3_C)-KC*pnorm(d4_C))
   CALLE_M<-x[5]*CALL1+(1-x[5])*CALL2
@@ -97,18 +98,25 @@ objective<-function(x){
 }
 
 #Calibration of the 7 parameters using market data
+mat<-c(mat,nrow(options))                         #adding one last term to mat for the loop
 params<-CV<-list()
 
 for (m in 1:length(terms)){
   
   T<-terms[m]                                     #maturity m
   r<-rates_n[m]                                   #discount rate for maturity m
-  prices<-options[mat[m]:mat[m+1],c(1,2,4)]       #prices of options for maturity m
-  prices<-na.omit(apply(prices,2,as.numeric))/100
-  C<-prices[,2]                                   #prices of calls
-  P<-prices[,3]                                   #prices of puts
-  KC<-KP<-prices[,1]                              #strikes of puts and calls
-  FWD<-fut[m,2]/100                               #future price for maturity m
+  
+  prices <- options %>%                           #prices of options for maturity m
+    select(-put_strike) %>% 
+    slice(mat[m]:mat[m+1]) %>% 
+    mutate_if(is.character, as.numeric) %>% 
+    na.omit %>% 
+    prices <- prices/100
+  
+  C<-prices$call_price                            #prices of calls
+  P<-prices$put_price                             #prices of puts
+  KC<-KP<-prices$call_strike                      #strikes of puts and calls
+  FWD<-fut$price[m]/100                           #future price for maturity m
   
   #1st optimization over 6 parameters to get initialization values for second optim
   PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
@@ -201,16 +209,22 @@ params<-CV<-list()
 #optimization
 for (m in 1:length(terms)){
   
-  prices<-options[mat[m]:mat[m+1],c(1,2,4)]
-  prices<-na.omit(apply(prices,2,as.numeric))/100
-  C<-prices[,2]                                   #prices of calls, expressed in % of par, so not to be divided by 100
-  P<-prices[,3]                                   #prices of puts
-  KC<-KP<-prices[,1]                              #strikes of puts and calls
-  FWD<-fut[m,2]/100
-  T<-terms[m]
-  r<-rates_n[m]
+  T<-terms[m]                                     #maturity m
+  r<-rates_n[m]                                   #discount rate for maturity m
   
-  ##Thus 1st optimization over first 8 parameters to get initialization values for second optim
+  prices <- options %>%                           #prices of options for maturity m
+    select(-put_strike) %>% 
+    slice(mat[m]:mat[m+1]) %>% 
+    mutate_if(is.character, as.numeric) %>% 
+    na.omit %>% 
+    prices <- prices/100
+  
+  C<-prices$call_price                            #prices of calls
+  P<-prices$put_price                             #prices of puts
+  KC<-KP<-prices$call_strike                      #strikes of puts and calls
+  FWD<-fut$price[m]/100                           #future price for maturity m
+  
+  #Thus 1st optimization over first 8 parameters to get initialization values for second optim
   PARA<-matrix(nrow=nrow(PR),ncol=12,dimnames=
                  list(c(),c(paste0("m",seq(3)),paste0("s",seq(3)),paste0("p",seq(2)),paste0("w",seq(2)),"p1+p2","SCE")))
   lower<-rep(c(-10,1e-6),each=3)
