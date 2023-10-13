@@ -1,5 +1,5 @@
 require("pacman")
-pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo")
+pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo","dplyr","tidyr")
 
 ##########################################   DOWNLOAD DATA    ##########################################
 
@@ -37,8 +37,9 @@ title(xlab="strike price (EUR)",adj=1)
 legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.35),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
 #2. Futures prices at options' maturities
-fut<-as.data.frame(do.call(rbind,strsplit(word(options$`call strike`[nchar(options$`call strike`)>20],-2,-1)," ")))
-fut[,2]<-as.numeric(fut[,2])
+fut<-as.data.frame(do.call(rbind,strsplit(word(options$call_strike[mat],-2,-1)," ")))
+colnames(fut)<-c("matu","price")
+fut$price<-as.numeric(fut$price)
 
 #3. Riskfree rates at options' maturities
 rates<-as.data.frame(read_excel("inputs/EUR_rates.xlsx"))        #taux d'actualisation des prix d'options
