@@ -4,22 +4,22 @@ pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo")
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
-options<-as.data.frame(read_excel("UEA_options.xlsx",1))                                   #upload data
-colnames(options)[c(1,5,8,12)]<-c("call strike","call price","put strike","put price")     #rename columns
-options<-options[,colnames(options)%in%c("call strike","call price","put strike","put price")]                                                   #remove columns
+options<-as.data.frame(read_excel("inputs/UEA_options_31_mai_2023.xlsx",1))                #upload data
+options <- options %>% 
+  rename(call_price="...5",call_strike="Calls",put_strike="...8",put_price="...12") %>% 
+  select(c(call_strike,call_price,put_strike,put_price)) %>% 
+  mutate_if(is.character, ~replace_na(.,"matu"))
 
 #get options maturities
-options$`call price`[is.na(options$`call price`)]<-
-  options$`put price`[is.na(options$`put price`)]<-"matu"     #identify new series
-mat<-which(is.na(as.numeric(options$`call strike`)))[-1]      #identify lines with a new option maturity
-matu<-word(options$`call strike`[mat],1,3)                    #the associated option maturity
+mat<-which(options$call_price=="matu")                       #identify lines with a new option maturity
+matu<-word(options$call_strike[mat],1,3)                    #the associated option maturity
 terms<-as.numeric(gsub('[^0-9.-]','',word(matu,2)))/365       
-mat<-c(mat,nrow(options))                                     #add one last term to mat for the loop
 
 #graph option prices for the most remote maturity
-graph<-cbind(options$`call strike`,options$`call price`, options$`put price`)
-graph<-apply(graph,2,as.numeric)
-graph<-graph[last(which(is.na(graph[,1]))):nrow(graph),]
+graph <- options %>% 
+  select(-put_strike) %>% 
+  mutate_if(is.character, as.numeric) %>% 
+  slice((last(mat)+1):nrow(graph))
 
 cex<-0.8
 col<-c("lightblue","indianred")
@@ -99,6 +99,7 @@ objective<-function(x){
 }
 
 #Calibration of the 7 parameters using market data
+mat<-c(mat,nrow(options))                                     #add one last term to mat for the loop
 params<-CV<-list()
 
 for (m in 1:length(terms)){
