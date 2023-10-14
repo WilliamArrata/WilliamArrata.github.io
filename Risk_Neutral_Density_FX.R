@@ -58,7 +58,7 @@ CALLE_M<-function(x,KC){
   d1_C<-(x[1]+x[3]^2-log(KC))/x[3]
   d2_C<-(x[1]-log(KC))/x[3]   # d2_C<-d1_C-x[3]
   d3_C<-(x[2]+x[4]^2-log(KC))/x[4]
-  d4_C<-(x[2]-log(KC))/x[4]   # d4_C<-d1_C-x[4]
+  d4_C<-(x[2]-log(KC))/x[4]   # d4_C<-d3_C-x[4]
   CALL1<-exp(-r*T)*(exp(x[1]+(x[3]^2/2))*pnorm(d1_C)-KC*pnorm(d2_C))
   CALL2<-exp(-r*T)*(exp(x[2]+(x[4]^2/2))*pnorm(d3_C)-KC*pnorm(d4_C))
   CALLE_M<-x[5]*CALL1+(1-x[5])*CALL2
@@ -96,7 +96,7 @@ MSE<-function(x){
 PR<-seq(0.1,0.49,0.01)
 
 objective<-function(x){
-  objective<-MSE(c(x[1:4],PR[i],0.5,0.5))
+  objective<-MSE(c(x[1:4],PR[i],rep(0.5,2)))
 }
 
 #Calibration of the 7 parameters using market data
@@ -104,15 +104,21 @@ mat<-c(mat,nrow(options))                                     #add one last term
 params<-CV<-list()
 
 for (m in 1:length(terms)){
-  
+
   T<-terms[m]                                     #maturity m
   r<-rates_n[m]                                   #discount rate for maturity m
-  prices<-options[mat[m]:mat[m+1],c(1,2,4)]       #prices of options for maturity m
-  prices<-na.omit(apply(prices,2,as.numeric))
-  C<-prices[,2]                                   #prices of calls
-  P<-prices[,3]                                   #prices of puts
-  KC<-KP<-prices[,1]                              #strikes of puts and calls
-  FWD<-fut[m,2]                                   #future price for maturity m
+  
+  prices <- options %>%                           #prices of options for maturity m
+    select(-put_strike) %>% 
+    slice(mat[m]:mat[m+1]) %>% 
+    mutate_if(is.character, as.numeric) %>% 
+    na.omit %>% 
+    prices <- prices/100
+  
+  C<-prices$call_price                            #prices of calls
+  P<-prices$put_price                             #prices of puts
+  KC<-KP<-prices$call_strike                      #strikes of puts and calls
+  FWD<-fut$price[m]/100                           #future price for maturity m
   
   #1st optimization over 6 parameters to get initialization values for second optim
   PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
@@ -197,7 +203,7 @@ PR<-expand.grid(c(rep(list(PR),2)))
 PR<-PR[rowSums(PR)<0.9,]
 
 objective<-function(x){
-  objective<-MSE(c(x[1:6],PR[i,1],PR[i,2],0.5,0.5))
+  objective<-MSE(c(x[1:6],PR[i,1:2],rep(0.5,2)))
 }
 
 params<-CV<-list()
@@ -205,16 +211,22 @@ params<-CV<-list()
 #optimization
 for (m in 1:length(terms)){
   
-  prices<-options[mat[m]:mat[m+1],c(1,2,4)]
-  prices<-na.omit(apply(prices,2,as.numeric))/100
-  C<-prices[,2]                                   #prices of calls, expressed in % of par, so not to be divided by 100
-  P<-prices[,3]                                   #prices of puts
-  KC<-KP<-prices[,1]                              #strikes of puts and calls
-  FWD<-fut[m,2]/100
-  T<-terms[m]
-  r<-rates_n[m]
+  T<-terms[m]                                     #maturity m
+  r<-rates_n[m]                                   #discount rate for maturity m
   
-  ##Thus 1st optimization over first 8 parameters to get initialization values for second optim
+  prices <- options %>%                           #prices of options for maturity m
+    select(-put_strike) %>% 
+    slice(mat[m]:mat[m+1]) %>% 
+    mutate_if(is.character, as.numeric) %>% 
+    na.omit %>% 
+    prices <- prices/100
+  
+  C<-prices$call_price                            #prices of calls
+  P<-prices$put_price                             #prices of puts
+  KC<-KP<-prices$call_strike                      #strikes of puts and calls
+  FWD<-fut$price[m]/100                           #future price for maturity m
+  
+  #Thus 1st optimization over first 8 parameters to get initialization values for second optim
   PARA<-matrix(nrow=nrow(PR),ncol=12,dimnames=
                  list(c(),c(paste0("m",seq(3)),paste0("s",seq(3)),paste0("p",seq(2)),paste0("w",seq(2)),"p1+p2","SCE")))
   lower<-rep(c(-10,1e-6),each=3)
@@ -224,9 +236,8 @@ for (m in 1:length(terms)){
   for (i in 1:nrow(PR)){
     sol<-nlminb(start=start,objective=objective,lower=lower, upper = upper, control=list(iter.max=500))
     PARA[i,1:6]<-sol$par[1:6]
-    PARA[i,7]<-PR[i,1]
-    PARA[i,8]<-PR[i,2]
-    PARA[i,11]<-PR[i,1]+PR[i,2]
+    PARA[i,7:8]<-PR[i,1:2]
+    PARA[i,11]<-sum(PR[i,1:2])
     PARA[i,12]<-sol$objective
   }
   PARA[,9:10]<-0.5
@@ -254,7 +265,7 @@ for (m in 1:length(terms)){
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
-range_px<-c(0.5,1.3)*range(as.numeric(options$`call strike`),na.rm=T)
+range_px<-c(0.5,1.3)*range(as.numeric(options$call_strike),na.rm=T)
 PX<-seq(range_px[1],range_px[2],10e-5)                                  #prices to compute PDF and CDF
 params<-do.call(rbind,params)
 
