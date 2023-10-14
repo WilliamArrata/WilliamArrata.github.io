@@ -21,11 +21,6 @@ graph <- options %>%
   mutate_if(is.character, as.numeric) %>% 
   slice((last(mat)+1):nrow(graph))
 
-#graph option prices for the most remote maturity
-graph<-cbind(options$`call strike`,options$`call price`, options$`put price`)
-graph<-apply(graph,2,as.numeric)
-graph<-graph[last(which(is.na(graph[,1]))):nrow(graph),]
-
 cex<-0.8
 col<-c("lightblue","indianred")
 par(mar=c(6,4,4,4) + 0.1, xpd=T, cex.axis=cex)
@@ -110,12 +105,18 @@ for (m in 1:length(terms)){
   
   T<-terms[m]                                     #maturity m
   r<-rates_n[m]                                   #discount rate for maturity m
-  prices<-options[mat[m]:mat[m+1],c(1,2,4)]       #prices of options for maturity m
-  prices<-na.omit(apply(prices,2,as.numeric))/100
-  C<-prices[,2]                                   #prices of calls
-  P<-prices[,3]                                   #prices of puts
-  KC<-KP<-prices[,1]                              #strikes of puts and calls
-  FWD<-fut[m,2]/100                               #future price for maturity m
+  
+  prices <- options %>%                           #prices of options for maturity m
+    select(-put_strike) %>% 
+    slice(mat[m]:mat[m+1]) %>% 
+    mutate_if(is.character, as.numeric) %>% 
+    na.omit %>% 
+    prices <- prices/100
+  
+  C<-prices$call_price                            #prices of calls
+  P<-prices$put_price                             #prices of puts
+  KC<-KP<-prices$call_strike                      #strikes of puts and calls
+  FWD<-fut$price[m]/100                           #future price for maturity m
   
   #1st optimization over 6 parameters to get initialization values for second optim
   PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
@@ -200,7 +201,7 @@ PR<-expand.grid(c(rep(list(PR),2)))
 PR<-PR[rowSums(PR)<0.9,]
 
 objective<-function(x){
-  objective<-MSE(c(x[1:6],PR[i,1],PR[i,2],0.5,0.5))
+  objective<-MSE(c(x[1:6],PR[i,1:2],rep(0.5,2)))
 }
 
 params<-CV<-list()
@@ -208,14 +209,20 @@ params<-CV<-list()
 #optimization
 for (m in 1:length(terms)){
   
-  prices<-options[mat[m]:mat[m+1],c(1,2,4)]
-  prices<-na.omit(apply(prices,2,as.numeric))/100
-  C<-prices[,2]                                   #prices of calls, expressed in % of par, so not to be divided by 100
-  P<-prices[,3]                                   #prices of puts
-  KC<-KP<-prices[,1]                              #strikes of puts and calls
-  FWD<-fut[m,2]/100
-  T<-terms[m]
-  r<-rates_n[m]
+  T<-terms[m]                                     #maturity m
+  r<-rates_n[m]                                   #discount rate for maturity m
+  
+  prices <- options %>%                           #prices of options for maturity m
+    select(-put_strike) %>% 
+    slice(mat[m]:mat[m+1]) %>% 
+    mutate_if(is.character, as.numeric) %>% 
+    na.omit %>% 
+    prices <- prices/100
+  
+  C<-prices$call_price                            #prices of calls
+  P<-prices$put_price                             #prices of puts
+  KC<-KP<-prices$call_strike                      #strikes of puts and calls
+  FWD<-fut$price[m]/100                           #future price for maturity m
   
   ##Thus 1st optimization over first 8 parameters to get initialization values for second optim
   PARA<-matrix(nrow=nrow(PR),ncol=12,dimnames=
@@ -227,9 +234,8 @@ for (m in 1:length(terms)){
   for (i in 1:nrow(PR)){
     sol<-nlminb(start=start,objective=objective,lower=lower, upper = upper, control=list(iter.max=500))
     PARA[i,1:6]<-sol$par[1:6]
-    PARA[i,7]<-PR[i,1]
-    PARA[i,8]<-PR[i,2]
-    PARA[i,11]<-PR[i,1]+PR[i,2]
+    PARA[i,7:8]<-PR[i,1:2]
+    PARA[i,11]<-sum(PR[i,1:2])
     PARA[i,12]<-sol$objective
   }
   PARA[,9:10]<-0.5
@@ -257,7 +263,7 @@ for (m in 1:length(terms)){
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
-range_px<-c(0.5,1.3)*range(as.numeric(options$`call strike`),na.rm=T)/100
+range_px<-c(0.5,1.3)*range(as.numeric(options$call_strike),na.rm=T)/100
 PX<-seq(range_px[1],range_px[2],10e-5)                                  #prices to compute PDF and CDF
 params<-do.call(rbind,params)
 
@@ -290,12 +296,12 @@ legend("bottom", ncol=4, inset=c(-0.05,-0.4),legend = word(matu,1), col=co, bty=
 #######################  CALCULATION OF ACCRUED COUPON OF CTDs AT OPTION MATURITY ###########################
 
 #Loading futures contracts characteristics
-OATA_fut<-as.data.frame(read_excel("inputs/OATA_fut_characteristics.xlsx",1))  #I upload all futures contracts
+OATA_fut<-as.data.frame(read_excel("inputs/OATA_fut_characteristics.xlsx",1))
 colnames(OATA_fut)<-c("ticker","conv_factor","coupon","ctd_matu")
 OATA_fut$ticker<-word(OATA_fut$ticker,1)
-OATA_fut<-OATA_fut[OATA_fut$ticker%in%fut$V1,]
+OATA_fut<-OATA_fut[OATA_fut$ticker%in%fut$matu,]
 OATA_fut$ctd_matu<-as.Date(OATA_fut$ctd_matu,format = "%d/%m/%Y")
-OATA_fut<-OATA_fut[match(fut$V1,OATA_fut$ticker),]
+OATA_fut<-OATA_fut[match(fut$matu,OATA_fut$ticker),]
 
 cp<-format(OATA_fut$ctd_matu, format="%m-%d")
 cp<-matrix(t(outer(2022:2024, cp, paste, sep="-")), nrow=nrow(OATA_fut), dimnames= list(c(),c("prev_cp","curr_cp","next_cp")))
