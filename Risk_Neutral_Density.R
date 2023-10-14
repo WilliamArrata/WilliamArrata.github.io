@@ -201,7 +201,7 @@ PR<-expand.grid(c(rep(list(PR),2)))
 PR<-PR[rowSums(PR)<0.9,]
 
 objective<-function(x){
-  objective<-MSE(c(x[1:6],PR[i,1],PR[i,2],0.5,0.5))
+  objective<-MSE(c(x[1:6],PR[i,1:2],rep(0.5,2)))
 }
 
 params<-CV<-list()
@@ -234,9 +234,8 @@ for (m in 1:length(terms)){
   for (i in 1:nrow(PR)){
     sol<-nlminb(start=start,objective=objective,lower=lower, upper = upper, control=list(iter.max=500))
     PARA[i,1:6]<-sol$par[1:6]
-    PARA[i,7]<-PR[i,1]
-    PARA[i,8]<-PR[i,2]
-    PARA[i,11]<-PR[i,1]+PR[i,2]
+    PARA[i,7:8]<-PR[i,1:2]
+    PARA[i,11]<-sum(PR[i,1:2])
     PARA[i,12]<-sol$objective
   }
   PARA[,9:10]<-0.5
@@ -264,7 +263,7 @@ for (m in 1:length(terms)){
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
-range_px<-range(as.numeric(options$`call strike`),na.rm=T)/100
+range_px<-range(as.numeric(options$call_strike),na.rm=T)/100
 PX<-seq(range_px[1],range_px[2],10e-5)                                  #prices to compute PDF and CDF
 params<-do.call(rbind,params)
 
