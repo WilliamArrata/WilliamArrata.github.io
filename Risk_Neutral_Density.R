@@ -1,25 +1,27 @@
 require("pacman")
 pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo","dplyr","tidyr")
 
+setwd("Z://5_Gestion_Financiere/5.1_RESU-BDF/SIMU_BDF/Stratégie 2023/CAP_juin_2023/projections_stochastiques/Euribor")
+
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
-options<-as.data.frame(read_excel("inputs/ERA_options_31_mai_2023.xlsx",1))                #upload data
-options <- options %>% 
+options<-as.data.frame(read_excel("inputs/ERA_options_31_mai_2023.xlsx",1))  %>% 
   rename(call_price="...5",call_strike="Calls",put_strike="...8",put_price="...12") %>% 
   select(c(call_strike,call_price,put_strike,put_price)) %>% 
   mutate_if(is.character, ~replace_na(.,"matu"))
 
-#get options maturities
-mat<-which(options$call_price=="matu")                       #identify lines with a new option maturity
-matu<-word(options$call_strike[mat],1,3)                    #the associated option maturity
-terms<-as.numeric(gsub('[^0-9.-]','',word(matu,2)))/365       
+#2. Futures contracts prices and maturities
+charac <- options %>% mutate(mat = row_number()) %>% filter(call_price=="matu") %>% 
+  select(call_strike, mat) %>% mutate(matu = word(call_strike, 1, 3)) %>% 
+  mutate(terms = as.numeric(gsub('[^0-9.-]','',word(matu,2)))/365) %>% mutate(fut_contract = word(call_strike,-2)) %>%
+  mutate(fut_price = word(call_strike, -1)) %>% mutate(fut_price = as.numeric(fut_price)) %>% select(-call_strike)
 
 #graph option prices for the most remote maturity
 graph <- options %>% 
   select(-put_strike) %>% 
   mutate_if(is.character, as.numeric) %>% 
-  slice((last(mat)+1):nrow(graph))
+  slice((last(charac$mat)+1):nrow(options))
 
 cex<-0.8
 col<-c("lightblue","indianred")
@@ -31,27 +33,19 @@ lines(graph[,c(1,3)], col=col[2])
 title(xlab="strike price (EUR)",adj=1)
 legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.25),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
-#2. Futures prices at options' maturities
-fut<-as.data.frame(do.call(rbind,strsplit(word(options$call_strike[mat],-2,-1)," ")))
-colnames(fut)<-c("matu","price")
-fut$price<-as.numeric(fut$price)
+#3. Riskfree rates at options' maturities (discount prices)
+rates <- as.data.frame(read_excel("inputs/EUR_rates.xlsx")) %>% mutate_if(is.character, as.numeric)
 
-#3. Riskfree rates at options' maturities
-rates<-as.data.frame(read_excel("inputs/EUR_rates.xlsx"))        #taux d'actualisation des prix d'options
-rates<-as.data.frame(apply(rates,2,as.numeric))
-rates<-rates[!is.na(rates$Yield),]
-
-#get by extrapolation a risk free rate for each option maturity
+#get by linear extrapolation a risk free rate at each option maturity
 rates_n<-list()
 for (i in 1:length(terms)){
-  rates_n[[i]]<-approxExtrap(rates$term, rates$Yield, xout=terms[i], method = "linear",
+  rates_n[[i]]<-approxExtrap(rates$term, rates$Yield, xout=charac$terms[i], method = "linear",
                              n = 50, rule = 2, f = 0, ties = "ordered", na.rm = FALSE)$y}
 rates_n<-unlist(rates_n)/100
 
 ###############################  CALIBRATION OF PARAMETERS  ##########################################
 
 #European call price, put price, and expected spot price for a sum of 2 lognormals in the Black & Scholes model
-#r,T,FWD ne sont pas déclarés comme variables car pour chaque terme dans la boucle ils sont fixes
 CALLE_M<-function(x,KC){
   d1_C<-(x[1]+x[3]^2-log(KC))/x[3]
   d2_C<-d1_C-x[3]
@@ -94,29 +88,24 @@ MSE<-function(x){
 PR<-seq(0.1,0.49,0.01)
 
 objective<-function(x){
-  objective<-MSE(c(x[1:4],PR[i],0.5,0.5))
+  objective<-MSE(c(x[1:4],PR[i],rep(0.5,2)))
 }
 
 #Calibration of the 7 parameters using market data
-mat<-c(mat,nrow(options))                         #adding one last term to mat for the loop
+mat<-c(charac$mat,nrow(options))                         #adding one last term to mat for the loop
 params<-CV<-list()
 
-for (m in 1:length(terms)){
+for (m in 1:length(charac$terms)){
   
-  T<-terms[m]                                     #maturity m
+  T<-charac$terms[m]                              #maturity m
   r<-rates_n[m]                                   #discount rate for maturity m
-  
   prices <- options %>%                           #prices of options for maturity m
-    select(-put_strike) %>% 
-    slice(mat[m]:mat[m+1]) %>% 
-    mutate_if(is.character, as.numeric) %>% 
-    na.omit %>% 
-    prices <- prices/100
-  
+    select(-put_strike) %>% slice(mat[m]:mat[m+1]) %>% mutate_if(is.character, as.numeric) %>% 
+    na.omit %>% mutate_all(funs(./100))
   C<-prices$call_price                            #prices of calls
   P<-prices$put_price                             #prices of puts
   KC<-KP<-prices$call_strike                      #strikes of puts and calls
-  FWD<-fut$price[m]/100                           #future price for maturity m
+  FWD<-charac$fut_price[m]/100                    #future price for maturity m
   
   #1st optimization over 6 parameters to get initialization values for second optim
   PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
@@ -134,10 +123,9 @@ for (m in 1:length(terms)){
   PARA[,6:7]<-0.5
   
   param<-PARA[which.min(PARA[,8]),-8]
-  
-  #2nd optimization over 8 parameters
   param[param==0]<-1e-6
   
+  #2nd optimization over 8 parameters
   L<-U<-rep(0,length(param))
   L[sign(param)==-1]<-2*param[sign(param)==-1]
   L[sign(param)==1]<-1e-2*param[sign(param)==1]
@@ -204,25 +192,21 @@ objective<-function(x){
   objective<-MSE(c(x[1:6],PR[i,1:2],rep(0.5,2)))
 }
 
+mat<-c(charac$mat,nrow(options))
 params<-CV<-list()
 
 #optimization
 for (m in 1:length(terms)){
   
-  T<-terms[m]                                     #maturity m
+  T<-charac$terms[m]                              #maturity m
   r<-rates_n[m]                                   #discount rate for maturity m
-  
   prices <- options %>%                           #prices of options for maturity m
-    select(-put_strike) %>% 
-    slice(mat[m]:mat[m+1]) %>% 
-    mutate_if(is.character, as.numeric) %>% 
-    na.omit %>% 
-    prices <- prices/100
-  
+    select(-put_strike) %>% slice(mat[m]:mat[m+1]) %>% mutate_if(is.character, as.numeric) %>% 
+    na.omit %>% mutate_all(funs(./100))
   C<-prices$call_price                            #prices of calls
   P<-prices$put_price                             #prices of puts
   KC<-KP<-prices$call_strike                      #strikes of puts and calls
-  FWD<-fut$price[m]/100                           #future price for maturity m
+  FWD<-charac$fut_price[m]/100                    #future price for maturity m
   
   #Thus 1st optimization over first 8 parameters to get initialization values for second optim
   PARA<-matrix(nrow=nrow(PR),ncol=12,dimnames=
@@ -241,10 +225,9 @@ for (m in 1:length(terms)){
   PARA[,9:10]<-0.5
   
   param<-PARA[which.min(PARA[,12]),-12]
-  
-  #2nd optimization over 10 parameters
   param[param==0]<-1e-6
   
+  #2nd optimization over 10 parameters
   L<-U<-rep(0,length(param))
   L[sign(param)==-1]<-2*param[sign(param)==-1]
   L[sign(param)==1]<-1e-2*param[sign(param)==1]
@@ -264,16 +247,15 @@ for (m in 1:length(terms)){
 
 #Values of the densities
 range_px<-range(as.numeric(options$call_strike),na.rm=T)/100
-PX<-seq(range_px[1],range_px[2],10e-5)                                  #prices to compute PDF and CDF
+PX<-seq(range_px[1],range_px[2],1e-6)                                  #prices to compute PDF and CDF
 params<-do.call(rbind,params)
 
 #Probability Density Function for any maturity for a sum of 2 or 3 lognormals
 PDF<-function(x){
-  if(ncol(params)!=5){
-    return(x[7]*dlnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*dlnorm(PX,meanlog=x[2], sdlog=x[5])+
-             (1-x[7]-x[8])*dlnorm(PX,meanlog=x[3], sdlog=x[6]))}
-  else {return(x[5]*dlnorm(PX,meanlog=x[1], sdlog=x[3]) + (1-x[5])*dlnorm(PX,meanlog=x[2], sdlog=x[4]))}
-}
+  ifelse(ncol(params)!=5,
+         return(x[7]*dlnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*dlnorm(PX,meanlog=x[2], sdlog=x[5]) + 
+                  (1-x[7]-x[8])*dlnorm(PX,meanlog=x[3], sdlog=x[6])),
+         return(x[5]*dlnorm(PX,meanlog=x[1], sdlog=x[3]) + (1-x[5])*dlnorm(PX,meanlog=x[2], sdlog=x[4])))}
 
 DNR<-apply(params,1,PDF)
 colSums(apply(DNR,2,rollmean,2)*diff(PX))    #check that integral of PDF*dPX is worth 1
@@ -309,11 +291,10 @@ legend("bottom", inset = c(-0.05,-0.45), legend = word(matu,1), ncol=6,col=co, l
 
 #Cumulative Density Function for any maturity for a sum of 2 or 3 lognormals
 CDF<-function(x){
-  if(ncol(params)!=5){
-    return(x[7]*plnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*plnorm(PX,meanlog=x[2], sdlog=x[5])+
-             (1-x[7]-x[8])*plnorm(PX,meanlog = x[3], sdlog = x[6]))}
-  else {return(x[5]*plnorm(PX,meanlog=x[1], sdlog=x[3])+(1-x[5])*plnorm(PX,meanlog=x[2], sdlog=x[4]))}
-}  
+  ifelse (ncol(params)!=5,
+          return(x[7]*plnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*plnorm(PX,meanlog=x[2], sdlog=x[5])+
+             (1-x[7]-x[8])*plnorm(PX,meanlog = x[3], sdlog = x[6])),
+          return(x[5]*plnorm(PX,meanlog=x[1], sdlog=x[3])+(1-x[5])*plnorm(PX,meanlog=x[2], sdlog=x[4])))}
 
 #Graph of cumulative density functions for rates
 NCDF<-apply(params,1,CDF)
@@ -336,7 +317,8 @@ SK_y<-moments(3)/SD_y^3
 KU_y<-moments(4)/SD_y^4
 
 #a few quantiles
-thres<-rev(c(1,5,25,50,75,95,99)/100)
+nb<-100
+thres<-rev(c(1,5,25,50,75,95,99)/nb)
 quantiles<-list()
 for (i in 1:nrow(params)){
   quantiles[[i]]<-list()
@@ -346,5 +328,14 @@ for (i in 1:nrow(params)){
   quantiles[[i]]<-unlist(quantiles[[i]])
 }
 
-quantiles<-cbind(terms,1-do.call(rbind,quantiles))
-colnames(quantiles)<-c("term",rev(paste0("q",100*thres)))
+quantiles<-as.data.frame(cbind(terms,1-do.call(rbind,quantiles)))
+colnames(quantiles)<-c("term",rev(paste0("q",nb*thres)))
+
+#illustration
+par(mar=c(6,4,4,4) + 0.1, xpd=T,cex.axis=cex)
+plot(100*(1-rev(PX)),DNR_rev[,7], xlab="3 mth Euribor future rate (%)",ylab="density",type="l",xlim=xlim_r,
+     ylim=range(DNR_rev[,7]),las=1, main=paste(word(matu[7],1), "RND from a mixture of 2 lognormals",sep=" "))
+polygon(100*c(1-rev(PX)[1-rev(PX)>=quantiles$q750[7]], max(1-rev(PX)), quantiles$q750[7]),
+        c(DNR_rev[1-rev(PX)>=quantiles$q750[7],7], 0, 0), col="red")
+polygon(100*c(quantiles$q50[7], min(1-rev(PX)), 1-rev(PX)[1-rev(PX)<=quantiles$q50[7]]),
+        c(0, 0, DNR_rev[1-rev(PX)<=quantiles$q50[7],7]), col="blue")
