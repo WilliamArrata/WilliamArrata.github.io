@@ -4,7 +4,6 @@ pacman::p_load("nloptr","readxl","dplyr","tidyr")
 ################################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL  ################################
 
 #I load the data
-setwd("Z://1_Service/1.2_Agents_Service/William")
 data<-as.data.frame(read_excel("French_bonds_06_10_2023.xlsx",1)) %>% 
   select(c("Maturity","Ask Yield to Maturity","Series")) %>%
   filter(!Series%in%c("OATe","OATi")) %>% 
