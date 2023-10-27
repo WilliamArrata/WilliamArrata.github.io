@@ -1,3 +1,6 @@
+
+#####   WILLIAM ARRATA - PORTFOLIO DIVERSIFICATION - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   #####
+
 mu<-c(3,7)*1e-2                            #Expected returns on assets A and B
 V<-c(1.44, 6.25)*1e-2                      #Variance on assets A and B
 
