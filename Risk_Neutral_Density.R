@@ -1,3 +1,5 @@
+##############  WILLIAM ARRATA - RISK NEUTRAL DENSITY ON EURIBOR FUTURES OPTIONS - WINTER 2023  #############
+
 require("pacman")
 pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo","dplyr","tidyr")
 
