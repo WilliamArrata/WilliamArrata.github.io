@@ -1,5 +1,5 @@
 
-#####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   #####################
+############   WILLIAM ARRATA - FEASIBLE SET - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   #############
 
 require("pacman")
 pacman::p_load("readxl","ggplot2","tibble")
