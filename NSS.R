@@ -1,3 +1,5 @@
+###################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL - WINTER 2023  ########################
+
 require("pacman")
 pacman::p_load("nloptr","readxl","dplyr","tidyr")
 
