@@ -1,5 +1,5 @@
 
-#####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ################
+########   WILLIAM ARRATA - RESAMPLED FRONTIER - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ##########
 
 require("pacman")
 pacman::p_load("tseries","readxl")
