@@ -1,5 +1,5 @@
 
-####   WILLIAM ARRATA - RESAMPLED EFFICIENT FRONTIERS - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023 #####
+#####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ################
 
 require("pacman")
 pacman::p_load("tseries","readxl")
@@ -7,11 +7,12 @@ pacman::p_load("tseries","readxl")
 #####################   DATA DOWNLOAD AND COMPUTATION OF EXPECTED RETURNS AND COVARIANCES   ################
 
 #I load the data
-data<-as.data.frame(read_excel("stock_prices.xlsx",1))          #load stock prices
-data<-apply(data,2,as.numeric)                                  #conversion in numeric
-returns<-apply(data[,-1],2,diff)/data[-1,-1]                    #daily historical returns
-mean<-252*matrix(colMeans(returns))                             #annualized expected returns
-sig<-252*cov(returns)                                           #annualized covariances
+return <- read_excel("stock_prices.xlsx",1) %>% rename(date="...1") %>%               #load stock prices
+  mutate_if(is.character, as.numeric) %>% mutate(date = as.Date(date, origin = "1899-12-30")) %>%
+  filter(date >= as.Date("2019-01-01")) %>%  mutate_if(is.numeric, ~ ( (.) - shift(.))/(.)) %>%
+  na.omit() %>% select_if(is.numeric)                                                   #daily historical returns
+mean<-252*matrix(colMeans(return))                                                      #annualized expected returns
+sig<-252*cov(return)                                                                    #annualized covariances
 
 
 ################################# SIGN CONSTRAINED EFFICIENT FRONTIER   #####################################
@@ -41,10 +42,10 @@ nports<-300   #nb of ptf, thus we have 300 target expected returns
 shorts<-F
 wmax<-1
 
-ptfs_no_s<-EF(returns=returns,nports=nports,shorts=shorts,wmax=wmax)
-low_no_s<-which.min(ptfs_no_s$vol)
-high_no_s<-which.max(ptfs_no_s$return)
-effi_no_s<-ptfs_no_s[low_no_s:high_no_s,]
+ptfs_no_s <- EF(returns = as.matrix(returns), nports = nports, shorts = shorts, wmax = wmax)
+low_no_s <- which.min(ptfs_no_s$vol)
+high_no_s <- which.max(ptfs_no_s$return)
+effi_no_s <- ptfs_no_s[low_no_s:high_no_s,]
 
 
 #######################################   RESAMPLING HISTORICAL RETURNS   #####################################
@@ -53,10 +54,11 @@ effi_no_s<-ptfs_no_s[low_no_s:high_no_s,]
 #Simulating n_samp samples of length n_tirages for the 6 assets
 require(MASS)
 set.seed(33)
-n_samp<-1000                                                       #number of samples
-n_tirages<-250                                                     #length of each sample
-estim <- replicate(n_samp , mvrnorm(n_tirages,mean,sqrt(sig))/252) #daily simulated returns in each simu
-resampm <- colMeans(estim, dims = 1)                               #the average return for each assets in each simu
+n_samp<-1000                                              #number of samples
+n_tirages<-250                                            #length of each sample
+#daily simulated returns in each simu
+estim <- replicate(n_samp , mvrnorm(n_tirages,mean, 252*sig, tol = 1e-06, empirical = FALSE)/252)
+resampm <- colMeans(estim, dims = 1)                      #the average return for each assets in each simu
 
 #Distribution of daily returns for 3 random simulations for a given asset
 alea<-sort(sample(n_samp,3))                                  
@@ -113,8 +115,8 @@ colnames(resamp)<-c("vol","return")
 col<-c("darkblue","indianred")
 par(mar=c(7, 6, 4, 4),xpd=T)
 plot(100*ptfs_no_s$vol,100*ptfs_no_s$return,col="darkblue", lwd=2,xlab="standard deviation (%)",
-     ylab="expected return (%)",las=1, type="l",pch=20,ylim=100*range(c(resamp$return,ptfs_no_s$return)),
-     xlim=100*range(c(resamp$vol,ptfs_no_s$vol)))
+     ylab="expected return (%)",las=1, type="l",pch=20,ylim=100*range(c(resamp$return,ptfs_no_s$return), na.rm = T),
+     xlim=100*range(c(resamp$vol,ptfs_no_s$vol), na.rm = T))
 lines(100*resamp$vol,100*resamp$return,col="indianred", lwd=2)
 legend("bottom", horiz=T,inset = c(0,-0.4),text.col=col,pch=rep(NA,3),lty=rep(1,3),col=col, bty="n",
        legend= c("Markowitz efficient frontier","resampled efficient frontier"))
@@ -123,20 +125,21 @@ legend("bottom", horiz=T,inset = c(0,-0.4),text.col=col,pch=rep(NA,3),lty=rep(1,
 cum_ave_w<-apply(aveweight,1,cumsum)
 
 #Graph
+at_1=seq(0,1,0.25)
 at_2=seq(1,ncol(cum_ave_w), length.out=7)
 colvector<-rainbow(6)
 par(mar=c(8,4,4,4) + 0.1,xpd=T)
 cex<-0.8
 par(cex.axis=cex)
 for (i in 1:nrow(cum_ave_w)){
-  plot(1:ncol(cum_ave_w),cum_ave_w[1+nrow(cum_ave_w)-i,], xlab="",ylab="", ylim=c(0,1),
+  plot(1:ncol(cum_ave_w),cum_ave_w[1+nrow(cum_ave_w)-i,], xlab="",ylab="", ylim=0:1,
        xlim=c(0,ncol(cum_ave_w)),las=1, col=colvector[i],pch=20, axes=F)
   polygon(c(1:ncol(cum_ave_w),ncol(cum_ave_w):1), c(rep(0,ncol(cum_ave_w)),rev(cum_ave_w[1+nrow(cum_ave_w)-i,])),
           col=colvector[i])
   par(new=T)}
 axis(1, at=at_2, labels=round(100*resamp$return,1)[at_2], cex.axis =cex)
-axis(2, at=seq(0,1,0.25),labels=seq(0,100,25),cex.axis=cex)
-mapply(title, c("expected return (%)", "weights (%)"),adj=c(1,0),line=c(-21,0.6))
+axis(2, at=at_1, labels=at_1*100,cex.axis=cex)
+mapply(title, c("expected return (%)", "weights (%)"),adj=1:0,line=c(-21,0.6))
 legend("bottom",ncol=3,inset = c(0,-0.35),legend=rev(colnames(returns)),text.col=colvector,col=colvector,
        lty=1, bty="n")
 box()
