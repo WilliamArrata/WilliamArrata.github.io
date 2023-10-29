@@ -99,7 +99,7 @@ for (i in 1:dim(comb2)[1]){
   cmatrix_2[[i]]<-comb2[i,,which.min(SSQRB[i,])]
 }
 lowssq_2<-matrix(do.call(rbind,cmatrix_2), nrow=nrow(SSQRB), 
-                 dimnames = list(c(), c('beta1','beta2','beta3','beta4','lambda1','lambda2')))
+                 dimnames = list(c(), )olnames(lowssq))
 
 stats_3 <- as.data.frame(lowssq_2) %>% 
   select(-c(beta1,beta2))
