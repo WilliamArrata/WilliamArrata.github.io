@@ -329,8 +329,11 @@ cf<-list()
 for (i in 1:nrow(OATA_fut)){cf[[i]]<-rep(OATA_fut$coupon[i],years_c[i])}
 
 #les termes des coupons et du ppal par CtD
-terms<-replicate(length(N),1:(1+years_c[1]))-t(replicate(1+years_c[1],acc_p))
-terms<-as.list(data.frame(terms))
+a <- sapply(1+years_c, seq, from=1)
+b <- split(rep(acc_p,1+years_c), rep(1:4, 1+years_c))
+
+terms <- mapply("-", a, b)
+terms[[which(do.call(cbind,terms)[1,]<0)]] <- 1+terms[[which(do.call(cbind,terms)[1,]<0)]]
 
 #le YTM par obligation à partir de son prix, pour tous les prix possibles de chaque distribution
 require('tvm')
