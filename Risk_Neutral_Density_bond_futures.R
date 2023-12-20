@@ -324,23 +324,21 @@ N<-100+OATA_fut$coupon                            #le flux payé à maturité par c
 
 years_c<-trunc(as.numeric(OATA_fut$ctd_matu-OATA_fut$option_matu)/365)   #le nb d'années de paiement de coupon par ctd (sf date finale)
 
-#les cash flows (sauf le paiement final) par CtD
-cf<-list()
-for (i in 1:nrow(OATA_fut)){cf[[i]]<-rep(OATA_fut$coupon[i],years_c[i])}
-
 #les termes des coupons et du ppal par CtD
 a <- sapply(1+years_c, seq, from=1)
 b <- split(rep(acc_p,1+years_c), rep(seq_along(years_c), 1+years_c))
+
 ifelse(length(unique(years_c))!=1,
        a <- a,
        a <- as.list(as.data.frame(a)))
 
-terms <- mapply("-", a, b)
-ifelse(length(unique(years_c))==1,
-       terms[terms[1,]<0] <- 1+terms[terms[1,]<0],
-       terms[[which(do.call(cbind,terms)[1,]<0)]] <- 1+terms[[which(do.call(cbind,terms)[1,]<0)]])
+term <- mapply("-", a, b)
 
-terms <- apply(terms, 2, list)
+ifelse(length(unique(years_c))==1,
+       term[1,which(term[1,]<0)] <- 1+term[1,which(term[1,]<0)],
+       term[[which(do.call(cbind,term)[1,]<0)]] <- 1+term[[which(do.call(cbind,term)[1,]<0)]])
+
+term <- apply(term, 2, list)
 
 #le YTM par obligation à partir de son prix, pour tous les prix possibles de chaque distribution
 require('tvm')
