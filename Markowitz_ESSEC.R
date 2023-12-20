@@ -1,17 +1,16 @@
 
-########   WILLIAM ARRATA - MARKOWITZ FRAMEWORK - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ########
+#####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ################
 
 require("pacman")
-pacman::p_load("tseries","readxl")
+pacman::p_load("tseries","readxl","dplyr", "tidyr", "data.table", "ggplot2")
 
 #####################   DATA DOWNLOAD AND COMPUTATION OF EXPECTED RETURNS AND COVARIANCES   ################
 
 #I load the data
-data<-as.data.frame(read_excel("stock_prices.xlsx",1))          #load stock prices
-data<-apply(data,2,as.numeric)                                  #conversion in numeric
-returns<-apply(data[,-1],2,diff)/data[-1,-1]                    #daily historical returns
-mean<-252*matrix(colMeans(returns))                             #annualized expected returns
-sig<-252*cov(returns)                                           #annualized covariances
+returns <- as.matrix(read_excel("stock_prices.xlsx") %>%  select_if(is.numeric) %>%  mutate_all(~ ( (.) - shift(.))/(.)) %>% 
+                       na.omit())
+mean <- 252*matrix(colMeans(returns))                             #annualized expected returns
+sig <- 252*cov(returns)                                           #annualized covariances
 
 
 ###########################   OPTIMAL PORTFOLIOS FOR SOME TARGET EXPECTED RETURNS   #########################
@@ -22,130 +21,117 @@ sig<-252*cov(returns)                                           #annualized cova
 #unless cov matrix is also provided. however, same weights whether annualized or not
 
 #Global Minimum Variance Portfolio
-gmvp<-portfolio.optim(returns, shorts=T)   #GMVP, if no target is given to the optimizer, only risk minimized
-print(c(gmvp$pw,252*gmvp$pm,sqrt(252)*gmvp$ps))           #annualized expected return and stddev, weights
+gmvp <- portfolio.optim(returns, shorts=T)         #GMVP, if no target is given to the optimizer, only risk minimized
+w_gmvp <- 100*gmvp$pw
+print(c(w_gmvp,252*gmvp$pm,sqrt(252)*gmvp$ps))     #annualized expected return and stddev, weights
 
-par(mar=c(8,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx<-barplot(100*gmvp$pw,axes=T,ylab="",col="darkred",las=2, ylim=130*range(gmvp$pw), names.arg=colnames(returns))
-text(x=xx,y=(100*gmvp$pw),paste(round(100*gmvp$pw),"%",sep=""), pos=3,font =i)
-title(sub="%",adj=0.02,line=-20)
+c_y <- 1.3
+col <- c("darkred","darkblue","darkgrey")
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx <- barplot(w_gmvp, ylab="%", col = col[1], las=2, ylim = c_y*range(w_gmvp), names.arg = colnames(returns))
+text(x = xx, y = w_gmvp, paste(round(w_gmvp), "%", sep = ""), pos = 3, font = 3)
 box()
 
 #Portfolio with an 20% target expected return
-target_1<-portfolio.optim(returns, pm=0.20/252,shorts=T)
-print(c(target_1$pw, 252*target_1$pm, sqrt(252)*target_1$ps))
+target_1 <- portfolio.optim(returns, pm = 0.20/252, shorts = T)
+w_1_s <- 100*target_1$pw
 
-par(mar=c(8,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx=barplot(100*target_1$pw,axes=T,ylab="",col="darkblue",las=2, ylim=130*range(target_1$pw),names.arg=colnames(returns))
-text(x=xx,y=(100*target_1$pw),paste(round(100*target_1$pw),"%",sep=""), pos=3,font =i)
-title(sub="%",adj=0.02,line=-20)
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx <- barplot(w_1_s, ylab = "%", col = col[2], las = 2, ylim = c_y*range(w_1_s), names.arg = colnames(returns))
+text(x = xx, y = w_1_s, paste(round(w_1_s), "%", sep = ""), pos=3, font = 3)
 box()
 
 #Portfolio with a 10% target expected return
-target_2<-portfolio.optim(returns, pm=0.10/252,shorts=T)
-print(c(target_2$pw, 252*target_2$pm, sqrt(252)*target_2$ps))
+target_2 <- portfolio.optim(returns, pm = 0.10/252, shorts = T)
+w_2_s <- 100*target_2$pw
 
-par(mar=c(7,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx=barplot(100*target_2$pw,axes=T,ylab="",col="darkgreen",las=2,ylim=130*range(target_2$pw),names.arg=colnames(returns))
-text(x=xx,y=100*target_2$pw,paste(round(100*target_2$pw),"%",sep=""), pos=3, font=i)
-title(sub="%",adj=0.02,line=-20)
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx = barplot(w_2_s, ylab = "%", col = col[3], las=2, ylim = c_y*range(w_2_s), names.arg = colnames(returns))
+text(x = xx, y = w_2_s, paste(round(w_2_s), "%", sep = ""), pos=3, font = 3)
 box()
 
 #Comparaison between weights in the three portfolios
 #NB: the higher the target expected return, the higher the weight on the asset class (if expected return positive)
-par(mar=c(7,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx<-barplot(100*rbind(target_1$pw,target_2$pw,gmvp$pw),axes=T,ylab="",col=c("darkred","darkblue","darkgrey"),las=2,beside=T,
-            ylim=130*range(c(target_1$pw,target_2$pw,gmvp$pw)), names.arg=colnames(returns))
-text(x=xx,cex=0.8,y=100*c(rbind(target_1$pw,target_2$pw,gmvp$pw)),
-     paste(round(100*c(rbind(target_1$pw,target_2$pw,gmvp$pw))),"%",sep=""),pos=3,font =i)
-title(sub="%",adj=0.02,line=-20)
-legend("topleft",legend=c("20% target return","10% target return","GMVP"),
-       text.col=c("darkred","darkblue","darkgrey"),pch=c(15),col=c("darkred","darkblue","darkgrey"))
+
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx <- barplot(rbind(w_gmvp, w_1_s, w_2_s), ylab="%", col = col, las = 2, beside = T, 
+              ylim = c_y*range(w_gmvp, w_1_s, w_2_s), names.arg = colnames(returns))
+text(x = xx, y = c(rbind(w_gmvp, w_1_s, w_2_s)), paste(round(c(rbind(w_gmvp, w_1_s, w_2_s))), "%", sep=""), 
+     pos = 3, font = 3)
+legend("topleft", legend = c("GMVP","10% target return","20% target return"), text.col = col, pch=c(15), col = col)
 box()
 
 #2. short selling forbidden
 
 #The Global Minimum Variance Portfolio
-gmvp_no<-portfolio.optim(returns) #GMVP. By default, short selling is banned
-print(c(gmvp_no$pw,252*gmvp_no$pm,sqrt(252)*gmvp_no$ps))    
+gmvp_no <- portfolio.optim(returns) #GMVP. By default, short selling is banned
+w_gmvp_n <- 100*gmvp_no$pw
 
-par(mar=c(7,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx<-barplot(100*gmvp_no$pw,axes=T,ylab="",col="indianred",las=2,ylim=130*range(gmvp_no$pw),names.arg=colnames(returns))
-title(sub="%",adj=0.02,line=-20)
-text(x=xx,y=100*gmvp_no$pw,paste(round(100*gmvp_no$pw),"%",sep=""), pos=3,font =i)
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx <- barplot(w_gmvp_n, ylab="%", col="indianred", las = 2, ylim = c_y*range(w_gmvp_n), names.arg = colnames(returns))
+text(x = xx, y = w_gmvp_n, paste(round(w_gmvp_n), "%", sep=""), pos = 3, font = 3)
 box()
 
 #A portfolio with an expected return of 20%
-target_1_no<-portfolio.optim(returns, pm=0.20/252)
-par(mar=c(7,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx<-barplot(100*target_1_no$pw,axes=T,ylab="",col="#92C5DE",las=2,ylim=130*range(target_1_no$pw),
-            names.arg=colnames(returns))
-text(x=xx,y=100*target_1_no$pw,paste(round(100*target_1_no$pw),"%",sep=""), pos=3,font =i)
-title(sub="%",adj=0.02,line=-20)
+target_1_no <- portfolio.optim(returns, pm = 0.20/252)
+w_1_n <- 100*target_1_no$pw
+
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx <- barplot(w_1_n, ylab = "%", col = "#92C5DE", las=2, ylim = c_y*range(w_1_n), names.arg = colnames(returns))
+text(x = xx, y = w_1_n, paste(round(w_1_n), "%", sep=""), pos=3, font = 3)
 box()
 
 #A portfolio with an expected return of 10%
-target_2_no<-portfolio.optim(returns, pm=0.10/252)
-par(mar=c(7,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx<-barplot(100*target_2_no$pw,axes=T,ylab="",col="green",las=2,ylim=130*range(target_2_no$pw),names.arg=colnames(returns))
-text(x=xx,y=100*target_2_no$pw,paste(round(100*target_2_no$pw),"%",sep=""), pos=3,font =i)
-title(sub="%",adj=0.02,line=-20)
+target_2_no <- portfolio.optim(returns, pm = 0.10/252)
+w_2_n <- 100*target_2_no$pw
+
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx <- barplot(w_2_n, ylab="%", col="green", las=2, ylim = c_y*range(w_2_n), names.arg = colnames(returns))
+text(x = xx, y = w_2_n, paste(round(w_2_n), "%", sep=""), pos = 3, font = 3)
 box()
 
 #Comparison of weights between the three portfolios
-par(mar=c(7,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx<-barplot(100*rbind(target_1_no$pw,target_2_no$pw,gmvp_no$pw),axes=T,ylab="",col=c("darkred","darkblue","darkgrey"),
-            las=2,beside=T,ylim=130*range(c(target_1_no$pw,target_2_no$pw,gmvp_no$pw)), names.arg=colnames(returns))
-text(x=xx,cex=0.8,y=100*c(rbind(target_1_no$pw,target_2_no$pw,gmvp_no$pw)),
-     paste(round(100*c(rbind(target_1_no$pw,target_2_no$pw,gmvp_no$pw))),"%",sep=""),pos=3,font =i)
-title(sub="%",adj=0.02,line=-20)
-legend("topleft",legend=c("20% target return","10% target return","GMVP"),
-       text.col=c("darkred","darkblue","darkgrey"),pch=c(15),col=c("darkred","darkblue","darkgrey"))
+
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx <- barplot(rbind(w_1_n,w_2_n,w_gmvp_n), ylab="%", col = col, las = 2, beside=T, 
+              ylim = c_y*range(w_1_n,w_2_n,w_gmvp_n), names.arg = colnames(returns))
+text(x = xx, y = c(rbind(w_1_n,w_2_n,w_gmvp_n)), paste(round(c(rbind(w_1_n,w_2_n,w_gmvp_n))), "%", sep = ""),
+     pos = 3, font = 3)
+legend("topleft", legend=c("20% target return","10% target return","GMVP"), text.col = col, pch=c(15), col = col)
 box()
 
 
 #3. comparison short selling- no short selling
 
 #Comparison between GMVPs
-par(mar=c(7,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx<-barplot(100*rbind(gmvp$pw,gmvp_no$pw),axes=T,ylab="", col=c("darkred","indianred"),las=2,beside=T,
-            ylim=130*range(c(gmvp$pw,gmvp_no$pw)),names.arg=colnames(returns))
-title(sub="%",adj=0.02,line=-20)
-text(x=xx,cex=0.7,y=100*c(rbind(gmvp$pw,gmvp_no$pw)),
-     gsub("0%","",paste(round(100*c(rbind(gmvp$pw,gmvp_no$pw)),1),"%",sep="")), pos=3,font =i)
-legend("topleft",legend=c("short selling","no short selling"),
-       text.col=c("darkred","indianred"),pch=c(15),col=c("darkred","indianred"))
+
+col_2 <- c("darkred","indianred")
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx <- barplot(rbind(w_gmvp, w_gmvp_n), ylab="%", col = col_2, las=2, beside=T, ylim = c_y*range(w_gmvp, w_gmvp_n), 
+              names.arg = colnames(returns))
+text(x = xx, y = c(rbind(w_gmvp, w_gmvp_n)), gsub("0%", "", paste(round(c(rbind(w_gmvp, w_gmvp_n))), "%", sep = "")), 
+     pos = 3, font = 3)
+legend("topleft", legend = c("short selling","no short selling"), text.col = col_2, pch=c(15), col = col_2)
 box()
 
 #Comparison of portfolios with 20% target expected returns : negative yielding assets now have zero weight
-par(mar=c(7,4,4,4) + 0.1)
-cex<-0.8
-par(cex.axis=cex)
-xx<-barplot(100*rbind(target_1$pw, target_1_no$pw),axes=T,ylab="",col=c("darkblue","#92C5DE"),las=2,beside=T,
-            ylim=130*range(c(target_1$pw, target_1_no$pw)), names.arg=colnames(returns))
-title(sub="%",adj=0.02,line=-20)
-text(x=xx,cex=0.7,y=100*c(rbind(target_1$pw, target_1_no$pw)),
-     paste(round(100*c(rbind(target_1$pw, target_1_no$pw)),1),"%",sep=""),pos=3,font =i)
-legend("topleft",legend=c("short selling","no short selling"),
-       text.col=c("darkblue","#92C5DE"),pch=c(15),col=c("darkblue","#92C5DE"))
+
+col_3 <- c("darkblue","#92C5DE")
+cex <- 0.8
+par(mar = c(8,4,4,4) + 0.1, cex.axis = cex)
+xx <- barplot(rbind(w_1_s, w_1_n), ylab = "%", col = col_3, las = 2, beside = T, ylim = c_y*range(w_1_s, w_1_n),
+              names.arg = colnames(returns))
+text(x = xx, y = c(rbind(w_1_s, w_1_n)), paste(round(c(rbind(w_1_s, w_1_n))), "%", sep=""), pos = 3, font = 3)
+legend("topleft", legend=c("short selling","no short selling"), text.col = col_3, pch = c(15), col = col_3)
 box()
 
 #######################################   FINDING THE EFFICIENT FRONTIER   #####################################
