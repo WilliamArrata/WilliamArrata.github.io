@@ -2,12 +2,12 @@
 ##############  WILLIAM ARRATA - RISK NEUTRAL DENSITY ON BOND FUTURES OPTIONS - WINTER 2023  #############
 
 require("pacman")
-pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo","dplyr","tidyr")
+pacman::p_load("stringr","Hmisc","stats","readxl","data.table","dplyr","tidyr","zoo")
 
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
-options<-as.data.frame(read_excel("inputs/OATA_options_31_mai_2023.xlsx",1))  %>% 
+options<-as.data.frame(read_excel("inputs/TYA_options_18122023.xlsx",1))   %>% 
   rename(call_strike="Calls", call_price="...5", put_strike="...8", put_price="...12") %>% 
   select(c(call_strike,call_price,put_strike,put_price)) %>% 
   mutate_if(is.character, ~replace_na(.,"matu"))
@@ -28,14 +28,13 @@ cex<-0.8
 col<-c("lightblue","indianred")
 par(mar=c(6,4,4,4) + 0.1, xpd=T, cex.axis=cex)
 plot(graph[,1:2],xlim=range(graph[,1],na.rm=T),ylim=range(graph[,2:3],na.rm=T),col=col[1],type="l",
-     main=paste(word(last(charac$matu),1),"OAT options prices at all strikes, 05/31/2023",sep=" "),
-     pch=20,xlab="",ylab="option premium (EUR)")
+     main=paste(word(last(charac$matu),1),"Treasury futures options prices at all strikes, 11/27/2023",sep=" "),
+     pch=20,xlab="",ylab="option premium (USD)")
 lines(graph[,c(1,3)], col=col[2])
-title(xlab="strike price (EUR)",adj=1)
+title(xlab="strike price (USD)",adj=1)
 legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.35),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
 #3. Riskfree rates at options' maturities
-rates <- as.data.frame(read_excel("inputs/EUR_rates.xlsx")) %>% mutate_if(is.character, as.numeric)
 
 #get by extrapolation a risk free rate for each option maturity
 rates_n<-list()
@@ -255,7 +254,7 @@ for (m in 1:length(charac$terms)){
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
-range_px<-c(0.5,1.3)*range(as.numeric(options$call_strike),na.rm=T)/100
+range_px <- c(0.8,1.3)*range(as.numeric(options$call_strike),na.rm=T)/100
 PX<-seq(range_px[1],range_px[2],1e-4)                                  #prices to compute PDF and CDF
 params<-do.call(rbind,params)
 
@@ -263,7 +262,7 @@ params<-do.call(rbind,params)
 PDF<-function(x){
   ifelse(ncol(params)!=5,
          return(x[7]*dlnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*dlnorm(PX,meanlog=x[2], sdlog=x[5]) + 
-                  (1-x[7]-x[8])*dlnorm(PX,meanlog=x[3], sdlog=x[6])),
+                  (1-sum(x[7:8]))*dlnorm(PX,meanlog=x[3], sdlog=x[6])),
          return(x[5]*dlnorm(PX,meanlog=x[1], sdlog=x[3]) + (1-x[5])*dlnorm(PX,meanlog=x[2], sdlog=x[4])))}
 
 DNR<-apply(params,1,PDF)
@@ -284,71 +283,67 @@ cex<-0.8
 par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
 plot(NA,pch=20,xlab="",ylab="density",main=paste("RNDs from a mixture of",nb_log,"lognormals"),xlim=xlim,ylim=ylim,las=1)
 mapply(lines,series,col=co)
-title(sub="OAT future price (% of par)",adj =1,line=2)
+title(sub="Treasury future price (% of par)",adj =1,line=2)
 legend("bottom", inset=c(-0.05,-0.3), legend=word(charac$matu,1), horiz=T,col=co, lty=1, bty="n")
 
 #######################  CALCULATION OF ACCRUED COUPON OF CTDs AT OPTION MATURITY ###########################
 
 #Loading futures contracts characteristics
-OATA_fut<-as.data.frame(read_excel("inputs/OATA_fut_characteristics.xlsx",1)) %>% 
-  rename(ticker ="Ticker", conv_factor = "FUT_CNVS_FACTOR", coupon="CPN", ctd_matu="MATURITY") %>% 
+TYA_fut<-as.data.frame(read_excel("inputs/TYA_fut_characteristics.xlsx",1)) %>% 
+  rename(ticker ="Ticker", ctd_conv_factor = "FUT_CNVS_FACTOR", ctd_coupon="CPN", ctd_matu="MATURITY") %>% 
   mutate(ticker= word(ticker,1)) %>% filter(ticker%in%charac$fut_contract) %>% 
   mutate(ctd_matu = as.Date(ctd_matu,format = "%d/%m/%Y"))
-OATA_fut<-OATA_fut[match(charac$fut_contract,OATA_fut$ticker),]
+TYA_fut<-TYA_fut[match(charac$fut_contract,TYA_fut$ticker),]
 
-cp<-format(OATA_fut$ctd_matu, format="%m-%d")
-cp<-matrix(t(outer(2022:2024, cp, paste, sep="-")), nrow=nrow(OATA_fut), dimnames= list(c(),c("prev_cp","curr_cp","next_cp")))
-OATA_fut<-cbind(OATA_fut,cp)
-OATA_fut[,grep("cp", colnames(OATA_fut))]<-apply(OATA_fut[,grep("cp", colnames(OATA_fut))],2,as.Date)
-OATA_fut$option_matu<-as.Date(sub(").*","",word(charac$matu,-1)),format = "%m/%d/%y")    #dates de matu des options
+cp<-format(TYA_fut$ctd_matu, format="%m-%d")
+cp<-matrix(t(outer(2022:2024, cp, paste, sep="-")), nrow=nrow(TYA_fut), dimnames= list(c(),c("prev_cp","curr_cp","next_cp")))
+TYA_fut<-cbind(TYA_fut,cp)
+TYA_fut[,grep("cp", colnames(TYA_fut))]<-apply(TYA_fut[,grep("cp", colnames(TYA_fut))],2,as.Date)
+TYA_fut$option_matu<-as.Date(sub(").*","",word(charac$matu,-1)),format = "%m/%d/%y")    #dates de matu des options
 
 #by default, we set the last cp payment date before the option maturity to be the current year cp payment date
-cp_dat_ctd<-OATA_fut$curr_cp
+cp_dat_ctd<-TYA_fut$curr_cp
 
 #if option matu comes before the cp payment date of the year, we replace the last cp payment date with next one
-correc<-which(colnames(OATA_fut)=="curr_cp")+as.numeric(as.numeric(OATA_fut$option_matu)-OATA_fut$curr_cp<0)
-cp_dat_ctd<-as.Date(diag(as.matrix(OATA_fut[,correc])), origin='1970-1-1')
+correc<-which(colnames(TYA_fut)=="curr_cp")+as.numeric(as.numeric(TYA_fut$option_matu)-TYA_fut$curr_cp>365)
+cp_dat_ctd<-as.Date(diag(as.matrix(TYA_fut[,correc])), origin='1970-1-1')
 
-acc_p<-as.numeric(OATA_fut$option_matu-cp_dat_ctd)/365    #durée d'accrual à la date de matu
-CC<-OATA_fut$coupon*acc_p                                    #le coupon couru de la CtD à la matu de l'option
-
+acc_p<-as.numeric(TYA_fut$option_matu-cp_dat_ctd)/365    #durée d'accrual à la date de matu
+CC<-TYA_fut$ctd_coupon*acc_p                             #le coupon couru de la CtD à la matu de l'option
 
 ####################  CONVERSION OF FUTURES PRICES INTO CTD PRICES THEN YIELDS AT MATU #######################
 
 P<-list()                                     #conversion des prix futures en prix de CtD à matu de l'option
-for (i in seq_along(terms)){
-  P[[i]]<-100*PX*OATA_fut$conv_factor[i]+CC[i]
+for (i in 1:nrow(TYA_fut)){
+  P[[i]]<-100*PX*TYA_fut$ctd_conv_factor[i]+CC[i]
 }
 
-N<-100+OATA_fut$coupon                            #le flux payé à maturité par chaque CtD
+N<-100+TYA_fut$ctd_coupon                                              #le flux payé à maturité par chaque CtD
 
-years_c<-trunc(as.numeric(OATA_fut$ctd_matu-OATA_fut$option_matu)/365)   #le nb d'années de paiement de coupon par ctd (sf date finale)
+years_c<-trunc(as.numeric(TYA_fut$ctd_matu-TYA_fut$option_matu)/365)   #le nb d'années de paiement de coupon par ctd (sf date finale)
+
+#les cash flows (sauf le paiement final) par CtD
+cf<-list()
+for (i in 1:nrow(TYA_fut)){cf[[i]]<-rep(TYA_fut$ctd_coupon[i],years_c[i])}
 
 #les termes des coupons et du ppal par CtD
 a <- sapply(1+years_c, seq, from=1)
 b <- split(rep(acc_p,1+years_c), rep(seq_along(years_c), 1+years_c))
-
-ifelse(length(unique(years_c))!=1,
-       a <- a,
-       a <- as.list(as.data.frame(a)))
+if(length(unique(years_c))==1){a <- as.list(as.data.frame(a))}
 
 term <- mapply("-", a, b)
-
-ifelse(length(unique(years_c))==1,
-       term[1,which(term[1,]<0)] <- 1+term[1,which(term[1,]<0)],
-       term[[which(do.call(cbind,term)[1,]<0)]] <- 1+term[[which(do.call(cbind,term)[1,]<0)]])
-
 term <- apply(term, 2, list)
 
 #le YTM par obligation à partir de son prix, pour tous les prix possibles de chaque distribution
 require('tvm')
 tri<-list()
-for (j in 1:nrow(OATA_fut)){
+for (j in 1:nrow(TYA_fut)){
   tri[[j]]<-list()
   for (i in 1:length(P[[j]])){
-    tri[[j]][[i]]<-xirr(cf=c(-P[[j]][[i]],cf[[j]],N[j]),tau=c(0,terms[[j]]),comp_freq=1,interval=c(0, 10))}
+    tri[[j]][[i]]<-xirr(cf=c(-P[[j]][[i]],cf[[j]],N[j]),tau=c(0,term[[j]]),comp_freq=1,interval=c(0, 20))}
   tri[[j]]<-unlist(tri[[j]])}
 tri<-do.call(cbind,tri)
+
 
 ##########################  GRAPHS OF DENSITIES OF YTM AT OPTION MATURITIES #############################
 
@@ -356,12 +351,12 @@ tri<-do.call(cbind,tri)
 E_y<-colSums(apply(tri*DNR,2,rollmean,k=2)*diff(PX))
 
 #check that yields are close to yields from delivery prices from futures prices
-PX_liv<-charac$fut_price*OATA_fut$conv_factor+CC   #on calcule un prix de livraison à des dates avant la livraison aussi
+PX_liv<-charac$fut_price*TYA_fut$ctd_conv_factor+CC   #on calcule un prix de livraison à des dates avant la livraison aussi
 
 #taux moyens implicites aux futures. NB: seule la moyenne est récupérable ici, pas la distribution
 y_fut<-list()
-for (i in 1:length(terms)){
-  y_fut[[i]]<-xirr(cf=c(-(PX_liv[[i]]),cf[[i]],N[[i]]), tau = c(0,terms[[i]]), comp_freq = 1, interval = c(0, 10))}
+for (i in 1:length(term)){
+  y_fut[[i]]<-xirr(cf=c(-(PX_liv[[i]]),cf[[i]],N[[i]]), tau = c(0,term[[i]]), comp_freq = 1, interval = c(0, 10))}
 
 #ecart entre les distributions fittées et le taux implicite au future
 ecart<-unlist(y_fut)-E_y
@@ -371,13 +366,12 @@ for (i in (1:nrow(params))){
 
 #graph de densité des taux implicites
 co<-rainbow(nrow(charac))
-xlim<-100*range(tri)
+xlim<-100*range(tri, na.rm=T)
 series_1_rev<-apply(tri,2,list)
 series_rev<-lapply(seq_along(series_1_rev), function(x) cbind(100*unlist(series_1_rev[[x]]), unlist(series_2[[x]])))
 
 par(mar=c(7,4,4,4) + 0.1, xpd=T, cex.axis=cex)
-plot(NA, pch=20, xlab="OAT future yield (%)",ylab="density",xlim=xlim,ylim=ylim,las=1,
-     main=paste("RNDs from a mixture of",nb_log,"lognormals"))
+plot(NA, pch=20, xlab="UST future yield (%)",ylab="density",xlim=xlim,ylim=ylim,las=1,main="RNDs from a mixture of 2 lognormals")
 mapply(lines,series_rev,col=co)
 legend("bottom", inset = c(-0.05,-0.2), legend = word(charac$matu,1), horiz = T, col=co, lty = 1, bty = "n")
 
@@ -385,35 +379,37 @@ legend("bottom", inset = c(-0.05,-0.2), legend = word(charac$matu,1), horiz = T,
 CDF<-function(x){
   ifelse (ncol(params)!=5,
           return(x[7]*plnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*plnorm(PX,meanlog=x[2], sdlog=x[5])+
-                   (1-x[7]-x[8])*plnorm(PX,meanlog = x[3], sdlog = x[6])),
+                   (1-sum(x[7:8]))*plnorm(PX,meanlog = x[3], sdlog = x[6])),
           return(x[5]*plnorm(PX,meanlog=x[1], sdlog=x[3])+(1-x[5])*plnorm(PX,meanlog=x[2], sdlog=x[4])))}
 
 #Graph of cumulative density functions for rates
 NCDF<-apply(params,1,CDF)
 NCDF_rev<-apply(NCDF,2,rev)
-series_2_CDF<-apply(NCDF_rev,2,list)
-series_CDF<-lapply(seq_along(series_1), function(x) cbind(100*unlist(rev(series_1_rev[[x]])), unlist(series_2_CDF[[x]])))
+series_2_CDF<-apply(NCDF,2,list)
+tri_rev<-apply(tri,2,rev)
+series_1_tri<-apply(tri_rev,2,list)
+series_CDF<-lapply(seq_along(series_1), function(x) cbind(100*unlist(series_1_tri[[x]]), unlist(series_2_CDF[[x]])))
 
 par(mar=c(7,6,4,4) + 0.1, xpd=T, cex.axis=cex)
 plot(NA, pch=20,xlab="",ylab="cumulative probability",xlim=xlim,ylim=c(0,1),las=1,
      main=paste("RNDs from a mixture of",nb_log,"lognormals"))
 mapply(lines,series_CDF,col=co)
-title(sub="OAT future yield (%)",adj =1,line=2)
+title(sub="UST future yield (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.35), legend = word(charac$matu,1), horiz = T,col=co, lty = 1, bty = "n")
 
 #mean, standard deviation, skewness and kurtosis for the distribution at each options' maturity
 dist_mean<-tri-t(replicate(nrow(DNR),E_y))
 moments<-function(x){
-  return(colSums(apply(dist_mean^x*DNR,2,rollmean,k=2)*diff(PX)))}
+  return(colSums(apply(dist_mean^x*DNR,2,rollmean,k=2)*diff(PX), na.rm=T))}
 SD_y<-sqrt(moments(2))
 SK_y<-moments(3)/SD_y^3
 KU_y<-moments(4)/SD_y^4
 
 #a few quantiles
-nb_q<-100
-thres<-rev(c(1,5,25,50,75,95,99)/nb_q)
+nb_q<-1000
+thres<-rev(seq(1:nb_q)/nb_q)
 quantiles<-list()
-for (i in 1:nrow(params)){
+for (i in 1:nrow(charac)){
   quantiles[[i]]<-list()
   for (j in 1:(length(thres))){
     quantiles[[i]][[j]]<-100*mean(tri[c(min(which(NCDF[,i]>thres[j]-0.01)),
@@ -422,5 +418,5 @@ for (i in 1:nrow(params)){
   quantiles[[i]]<-unlist(quantiles[[i]])
 }
 
-quantiles<-cbind(charac$terms,do.call(rbind,quantiles))
+quantiles<-as.data.frame(cbind(charac$terms,do.call(rbind,quantiles)))
 colnames(quantiles)<-c("term",rev(paste0("q",nb_q*thres)))
