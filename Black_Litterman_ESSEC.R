@@ -1,17 +1,16 @@
 
-###########   WILLIAM ARRATA - BLACK LITTERMAN - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ##########
+#####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ################
 
 require("pacman")
 pacman::p_load("tseries","readxl","dplyr","tidyr","data.table")
 
 #####################   DATA DOWNLOAD AND COMPUTATION OF EXPECTED RETURNS AND COVARIANCES   ################
 
-return <- read_excel("stock_prices_2.xlsx",1) %>% rename(date="...1") %>%     #load stock prices
-  mutate_if(is.character, as.numeric) %>% mutate(date = as.Date(date, origin = "1899-12-30")) %>%
-  filter(date >= as.Date("2019-01-01")) %>%  mutate_if(is.numeric, ~ ( (.) - shift(.))/(.)) %>%
-  na.omit() %>% select_if(is.numeric)                                         #daily historical returns
-mean<-252*matrix(colMeans(return))                                            #annualized expected returns
-sig<-252*cov(return)                                                          #annualized covariances
+#I load the data
+returns <- as.matrix(read_excel("stock_prices.xlsx") %>%  select_if(is.numeric) %>%  mutate_all(~ ( (.) - shift(.))/(.)) %>% 
+                       na.omit() %>% rename_with(~gsub(" Equity","", (.)) ))   #historical daily returns
+mean <- 252*matrix(colMeans(returns))                             #annualized expected returns
+sig <- 252*cov(returns)                                           #annualized covariances
 
 ################################# SIGN CONSTRAINED EFFICIENT FRONTIER   #####################################
 
@@ -48,9 +47,8 @@ effi_no_s <- ptfs_no_s[low_no_s:high_no_s,]
 #######################################   BLACK LITTERMAN MODEL   #####################################
 
 # relative weights of assets in benchmark portfolio
-w_m <- read_excel("stock_prices_2.xlsx",2) %>%
-  mutate_if(is.character, as.numeric) %>% na.omit() %>% select_if(is.numeric) %>% 
-  mutate(across()/rowSums(across()))
+w_m <- read_excel("stock_prices_2.xlsx",2) %>% mutate_if(is.character, as.numeric) %>% na.omit() %>% 
+  select_if(is.numeric) %>% mutate(across()/rowSums(across()))
 
 #expected return on the market portfolio
 return_m <- read_excel("stock_prices_2.xlsx",3) %>% rename(date="...1") %>% 
@@ -62,22 +60,27 @@ var_m <- 252*var(return_m)
 
 r_f <- 0.01      #the riskfree rate
 
-#Participation Matrix: asset 3 to unerperform asset 1; absolute view on asset 2
+#Participation Matrix: Vue relative sur MC vs OR; vue absolue sur Bouygues
 P <- matrix(c(-1,0,1,0,0,0,0,1,0,0,0,0), ncol = ncol(return), byrow=T)
-Q <- c(0.20,-0.20)                          #Vector of associated subjective expected returns means
+
+#Vector of subjective expected returns means: MC FP va surperformer OR FP de 7%; Bouygues va avoir une perf de -5%
+Q <- c(0.20,-0.20)
+
 Omega <- matrix(c(0.005,0,0,0.02), nrow = length(Q))      #Matrix of views uncertainties
 tau <- 0.025    #shrinkage coefficient
-pi <- c(lambda_m)*sig%*%t(w_m) + r_f        #CAPM implied vector of prior mean expected returns
-lambda_m <- (r_m - r_f)/var_m               #market risk aversion coefficient
+
+lambda_m <- (r_m - r_f)/var_m                  #market risk aversion coefficient: expected return on mkt ptf in excess of rf divided by market ptf variance
+
+pi <- c(lambda_m)*sig%*%t(w_m) + r_f    #Vector of prior mean expected returns
 
 #Vector of posterior mean expected returns:
 post_m <- pi + tau*sig%*%t(P)%*%solve(tau*P%*%sig%*%t(P) + Omega)%*%(Q - P%*%pi)
 
-#A series of returns in the posterior distribution is obtained from the mean of posterior expected returns
+#a series of returns in the posterior distribution is obtained from the mean of expected returns
 require(MASS)
 set.seed(33)
 n_tirages <- nrow(return)
-return_post <- mvrnorm(n_tirages, post_m, 252*sig, tol = 1e-6, empirical = F)/252
+return_post <- mvrnorm(n_tirages, post_m, Sigma = 252*sig, tol = 1e-06, empirical = FALSE)/252
 
 #I plot the efficient frontier
 ptf_BL <- EF(returns = return_post, nports = nports, shorts = shorts, wmax = wmax)
@@ -101,9 +104,8 @@ colvector<-rainbow(ncol(return_post))
 at_BL_1=seq(1,ncol(cum_w_BL), length.out=7)
 at_BL_2<-seq(0,1,0.25)
 
-par(mar=c(8,4,4,4) + 0.1,xpd=T)
 cex<-0.8
-par(cex.axis=cex)
+par(mar=c(8,4,4,4) + 0.1,xpd=T, cex.axis=cex)
 for (i in 1:nrow(cum_w_BL)){
   plot(1:ncol(cum_w_BL),cum_w_BL[1+nrow(cum_w_BL)-i,],xlab="",ylab="", ylim=range(cum_w_BL),xlim=c(0,ncol(cum_w_BL)),
        las=1,col=colvector[i],pch=20,axes=F)
@@ -112,7 +114,7 @@ for (i in 1:nrow(cum_w_BL)){
   par(new=T)}
 axis(1, at=at_BL_1, labels=round(100*ptf_BL$ret,1)[at_BL_1], cex.axis = cex)
 axis(2, at=at_BL_2,labels=100*at_BL_2,cex.axis =cex)
-mapply(title, c("expected return (%)", "weights (%)"),adj=1:0,line=c(-17,0.6))
-legend("bottom",ncol=3,inset = c(0,-0.35),legend=rev(colnames(returns)),text.col=colvector,col=colvector,
+mapply(mtext, c("expected return (%)", "weights (%)"), side=c(1,2), line = rep(2.5,2))
+legend("bottom",ncol=3,inset = c(0,-0.45),legend=rev(colnames(returns)),text.col=colvector,col=colvector,
        lty=1, bty="n")
 box()
