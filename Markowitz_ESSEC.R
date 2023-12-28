@@ -1,3 +1,4 @@
+
 #####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ################
 
 require("pacman")
@@ -7,7 +8,7 @@ pacman::p_load("tseries","readxl","dplyr", "tidyr", "data.table", "ggplot2")
 
 #I load the data
 returns <- as.matrix(read_excel("stock_prices.xlsx") %>%  select_if(is.numeric) %>%  mutate_all(~ ( (.) - shift(.))/(.)) %>% 
-                       na.omit() %>% rename_with(~gsub(" Equity","", (.)) ))           #daily historical returns
+                       na.omit() %>% rename_with(~gsub(" Equity","", (.)) ))
 mean <- 252*matrix(colMeans(returns))                             #annualized expected returns
 sig <- 252*cov(returns)                                           #annualized covariances
 
@@ -189,10 +190,8 @@ ggplot(100*ptfs, aes(vol,return)) +
              bquote(mu[0]== .(round(ptfs$return[low]*100, 1)) ~ "% ;"~ sigma[0] == .(round(ptfs$vol[low]*100, 1))~"%")) +
   annotate("text", x = 100*ptfs$vol[high], y = 100*ptfs$return[high], hjust = -0.1, vjust=0.2, label = 
              bquote(mu[1]== .(round(ptfs$return[high]*100, 1)) ~ "% ;"~ sigma[1] == .(round(ptfs$vol[high]*100, 1))~"%")) +
-  labs(x = "standard deviation (%)", y = "expected return (%)", color = "") +
-  theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm"))
+  labs(x="standard deviation (%)", y="expected return (%)") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm"))
 
-#graph with ggplot2 using geom_segment
 ggplot() +
   xlim(c(95,105)*range(ptfs$vol)) + ylim(c(95,105)*range(ptfs$return)) +
   geom_segment(data = 100*ptfs, aes(x = vol, xend = dplyr::lead(vol),
@@ -204,8 +203,7 @@ ggplot() +
              bquote(mu[0]== .(round(ptfs$return[low]*100, 1)) ~ "% ;"~ sigma[0] == .(round(ptfs$vol[low]*100, 1))~"%")) +
   annotate("text", x = 100*ptfs$vol[high], y = 100*ptfs$return[high], hjust = -0.1, vjust=0.2, label = 
              bquote(mu[1]== .(round(ptfs$return[high]*100, 1)) ~ "% ;"~ sigma[1] == .(round(ptfs$vol[high]*100, 1))~"%")) +
-  labs(x = "standard deviation (%)", y = "expected return (%)", color = "") +
-  theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm"))
+  labs(x="standard deviation (%)", y="expected return (%)") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm"))
 
 
 #2. Efficient frontier when short selling is forbidden
@@ -239,7 +237,6 @@ ggplot(100*ptfs_no_s, aes(vol,return)) +
   labs(x = "standard deviation (%)", y = "expected return (%)", color = "") +
   theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm"))
 
-
 #Weights for each target return
 cum_w<-apply(ptfs_no_s[,grep("w",colnames(ptfs_no_s))],1,cumsum)
 
@@ -260,6 +257,7 @@ mapply(mtext, c("expected return (%)", "weights (%)"), side=c(1,2), line = rep(2
 legend("bottom", ncol = 3, inset = c(0,-0.5), legend = rev(colnames(returns)), text.col = colvector,
        col = colvector, pch=c(15), bty="n")
 box()
+
 
 #Comparaison of frontiers short selling allowed short selling forbidden
 col_no<-c("lightblue","blue","indianred","red")
