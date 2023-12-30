@@ -35,6 +35,7 @@ title(xlab="strike price (USD)",adj=1)
 legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.35),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
 #3. Riskfree rates at options' maturities
+rates <- as.data.frame(read_excel("inputs/USD_rates_18_12_2023.xlsx")) %>% mutate_if(is.character, as.numeric)
 
 #get by extrapolation a risk free rate for each option maturity
 rates_n<-list()
@@ -322,9 +323,7 @@ N<-100+TYA_fut$ctd_coupon                                              #le flux 
 
 years_c<-trunc(as.numeric(TYA_fut$ctd_matu-TYA_fut$option_matu)/365)   #le nb d'années de paiement de coupon par ctd (sf date finale)
 
-#les cash flows (sauf le paiement final) par CtD
-cf<-list()
-for (i in 1:nrow(TYA_fut)){cf[[i]]<-rep(TYA_fut$ctd_coupon[i],years_c[i])}
+cf <- split(rep(TYA_fut$ctd_coupon, years_c), rep(seq_along(years_c), years_c)) #les coupons (sauf le final) par CtD
 
 #les termes des coupons et du ppal par CtD
 a <- sapply(1+years_c, seq, from=1)
