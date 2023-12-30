@@ -17,7 +17,7 @@ w <- cbind(w, rev(w))                                                 #a range o
 mean <- 100*w%*%m                                                     #portfolio expected returns
 pair<-list()                               
 for (i in seq_along(rho)){
-  sd[[i]] <- 100*sqrt(diag(w%*%matrix(cov[[i]][[1]],nrow=2)%*%t(w)))  #portfolio variance
+  sd[[i]] <- 100*sqrt(diag(w%*%matrix(cov[[i]][[1]],nrow=2)%*%t(w)))  #portfolio standard deviations
   pair[[i]]<-data.frame(stdev = sd[[i]], mean = mean)}                
 
 #Graph of the 300 portfolios in the mean standard deviation space
