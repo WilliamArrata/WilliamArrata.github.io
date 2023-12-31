@@ -37,6 +37,7 @@ legend("bottom", horiz=T, inset = c(0,-0.4), text.col = colv, pch = rep(NA,4), l
 
 #######################################   COMBINING ASSET BY PAIRS   ##################################
 
+
 mu <- list(c(0.03,0.05), c(0.05,0.065), c(0.065,0.075),             #expected returns on pairs of assets
            c(0.075,0.11), c(0.11,0.15), c(0.03,0.15))
 sig <- list(c(0.05,0.08,0.03), c(0.08,0.11,-0.03), c(0.11,0.12,0.06), #covariances between pairs of assets
