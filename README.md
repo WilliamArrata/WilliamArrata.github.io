@@ -32,7 +32,7 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Portfolio insurance techniques**     |   [CPPI.pdf](https://github.com/WilliamArrata/WilliamArrata/files/13625440/CPPI.pdf)| to come  | to come | [FINM32225_exercises_18.pdf](https://github.com/WilliamArrata/WilliamArrata/files/12843621/FINM32225_exercises_18.pdf) |   [FINM32225_exercises_18_correction.pdf](https://github.com/WilliamArrata/WilliamArrata/files/12843625/FINM32225_exercises_18_correction.pdf)| 
 | **Style Investing**     |  [style_investing.pdf](https://github.com/WilliamArrata/WilliamArrata/files/13376444/style_investing.pdf)|  |  |  | 
 | **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  |  |  |  | 
-| **Exchange-Traded Funds part 2**     |[ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11454048/ETF_trading.pdf)|  | | |  |
+| **Exchange-Traded Funds part 2**     |  [ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/13932703/ETF_trading.pdf)     |   |    |     |
 
 ### **OTHER TOPICS IN QUANTITATIVE FINANCE**
 ***
