@@ -1,48 +1,42 @@
-
-##############  WILLIAM ARRATA - RISK NEUTRAL DENSITY ON BOND FUTURES OPTIONS - WINTER 2023  #############
+##############  WILLIAM ARRATA - RISK NEUTRAL DENSITY ON OAT FUTURES OPTIONS - WINTER 2023  #############
 
 require("pacman")
-pacman::p_load("stringr","Hmisc","stats","readxl","data.table","dplyr","tidyr","zoo")
+pacman::p_load("stringr","Hmisc","stats","readxl","data.table","dplyr","tidyr","zoo", "janitor")
 
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
-options<-as.data.frame(read_excel("inputs/TYA_options_18122023.xlsx",1))   %>% 
-  rename(call_strike="Calls", call_price="...5", put_strike="...8", put_price="...12") %>% 
-  select(c(call_strike,call_price,put_strike,put_price)) %>% 
-  mutate_if(is.character, ~replace_na(.,"matu"))
+options <- read_excel("inputs/OATA_options_31_mai_2023.xlsx",1) %>% row_to_names(row_number = 1) %>% 
+  clean_names() %>% select(contains(c("strike", "last"))) %>% mutate_if(is.character, ~replace_na(.,"matu")) %>% 
+  rename_with(~c("call_strike", "put_strike", "call_price", "put_price")) %>% mutate_if(is.character, as.numeric)
 
 #2. Futures contracts prices and maturities
-charac <- options %>% mutate(mat = row_number()) %>% filter(call_price=="matu") %>% 
-  select(call_strike, mat) %>% mutate(matu = word(call_strike, 1, 3)) %>% 
-  mutate(terms = as.numeric(gsub('[^0-9.-]','',word(matu,2)))/365) %>% mutate(fut_contract = word(call_strike,-2)) %>%
-  mutate(fut_price = word(call_strike, -1)) %>% mutate(fut_price = as.numeric(fut_price)) %>% select(-call_strike)
+charac <- options %>% mutate(mat = row_number()) %>% filter(call_price=="matu") %>% mutate(matu = word(call_strike, 1, 3)) %>% 
+  mutate(terms = as.numeric(gsub('[^0-9.-]','', word(matu, 2)))/365, fut_contract = word(call_strike,-2)) %>% 
+  mutate(fut_price = as.numeric( word(call_strike, -1))) %>%  select(-colnames(options))
 
 #graph option prices for the most remote maturity
-graph <- options %>% 
-  select(-put_strike) %>% 
-  mutate_if(is.character, as.numeric) %>% 
-  slice((last(charac$mat)+1):nrow(options))
+last_mat <- options %>% slice((last(charac$mat)+1):nrow(options))
 
-cex<-0.8
-col<-c("lightblue","indianred")
-par(mar=c(6,4,4,4) + 0.1, xpd=T, cex.axis=cex)
-plot(graph[,1:2],xlim=range(graph[,1],na.rm=T),ylim=range(graph[,2:3],na.rm=T),col=col[1],type="l",
-     main=paste(word(last(charac$matu),1),"Treasury futures options prices at all strikes, 11/27/2023",sep=" "),
-     pch=20,xlab="",ylab="option premium (USD)")
-lines(graph[,c(1,3)], col=col[2])
-title(xlab="strike price (USD)",adj=1)
-legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.35),legend=c("calls","puts"),lty=1,text.col=col,col=col)
+cex <- 0.8
+col <- c("lightblue","indianred")
+par(mar=c(6,4,4,4) + 0.1, xpd = T, cex.axis = cex)
+plot(last_mat$call_strike, last_mat$call_price, xlim = range(c(last_mat$call_strike, last_mat$put_strike)),
+     ylim = range( c(last_mat$call_price, last_mat$put_price) ), col=col[1], type="l", pch=20, xlab=" ",
+     main = paste(word(last(charac$matu),1),"OAT futures options prices at all strikes, 05/31/2023",sep=" "),
+     ylab = "option premium (EUR)")
+lines(last_mat$put_strike, last_mat$put_price, col=col[2])
+title( xlab = "strike price (EUR)", adj = 1)
+legend("bottom", horiz = T, bty = "n", inset = c(-0.05, -0.35), legend = c("calls", "puts"), lty = 1,
+       text.col = col, col = col)
 
 #3. Riskfree rates at options' maturities
-rates <- as.data.frame(read_excel("inputs/USD_rates_18_12_2023.xlsx")) %>% mutate_if(is.character, as.numeric)
+rates <- read_excel("inputs/EUR_rates.xlsx") %>% mutate_if(is.character, as.numeric)
 
 #get by extrapolation a risk free rate for each option maturity
-rates_n<-list()
-for (i in 1:nrow(charac)){
-  rates_n[[i]]<-approxExtrap(rates$term, rates$Yield, xout=charac$terms[i], method = "linear",
-                             n = 50, rule = 2, f = 0, ties = "ordered", na.rm = FALSE)$y}
-rates_n<-unlist(rates_n)/100
+rates_n <- approxExtrap(rates$term, rates$Yield, xout=charac$terms, method = "linear", n = 50, rule = 2, f = 0, 
+                        ties = "ordered", na.rm = F)$y/100
+
 
 ###############################  CALIBRATION OF PARAMETERS  ##########################################
 
@@ -95,55 +89,55 @@ objective<-function(x){
 }
 
 #Calibration of the 7 parameters using market data
-mat<-c(charac$mat,nrow(options))                         #adding one last term to mat for the loop
-params<-CV<-list()
+mat <- c(charac$mat, nrow(options))                         #adding one last term to mat for the loop
+params <- CV <- list()
 
 for (m in 1:length(charac$terms)){
   
   #Elements of the option price function which are not random variables
-  T<-charac$terms[m]                              #maturity m
-  r<-rates_n[m]                                   #discount rate for maturity m
+  T <- charac$terms[m]                              #maturity m
+  r <- rates_n[m]                                   #discount rate for maturity m
   prices <- options %>%
     select(-put_strike) %>% slice(mat[m]:mat[m+1]) %>% mutate_if(is.character, as.numeric) %>% 
     na.omit  %>% mutate_all(funs(./100))
-  C<-prices$call_price                            #prices of calls for maturity m
-  P<-prices$put_price                             #prices of puts for maturity m
-  KC<-KP<-prices$call_strike                      #strikes of puts and callsv for maturity m
-  FWD<-charac$fut_price[m]/100                    #future price for maturity m
+  C <- prices$call_price                            #prices of calls for maturity m
+  P <- prices$put_price                             #prices of puts for maturity m
+  KC <- KP <- prices$call_strike                    #strikes of puts and callsv for maturity m
+  FWD <- charac$fut_price[m]/100                    #future price for maturity m
   
   #1st optimization over 6 parameters to get initialization values for second optim
-  PARA<-matrix(nrow=length(PR),ncol=8,dimnames=
-                 list(c(),c(paste0("m",seq(2)),paste0("s",seq(2)),"p",paste0("w",seq(2)),"SCE")))
-  start<-rep(c(log(FWD),0.2),each=2)
-  lower<-rep(c(-10,1e-6),each=2)
-  upper<-rep(c(10,0.9),each=2)
+  PARA <- matrix(nrow = length(PR), ncol = 8, dimnames =
+                   list(c(), c(paste0("m", seq(2)), paste0("s", seq(2)), "p", paste0("w", seq(2)), "SCE")))
+  start <- rep(c(log(FWD),0.2), each = 2)
+  lower <- rep(c(-10,1e-6), each = 2)
+  upper <- rep(c(10,0.9), each = 2)
   
   for (i in 1:length(PR)){
-    sol<-nlminb(start=start,objective=objective,lower=lower, upper = upper, control=list(iter.max=500))
-    PARA[i,1:4]<-sol$par
-    PARA[i,8]<-sol$objective
+    sol <- nlminb(start = start, objective = objective, lower = lower, upper = upper, control=list(iter.max=500))
+    PARA[i,1:4] <- sol$par
+    PARA[i,8] <- sol$objective
   }
-  PARA[,5]<-PR
-  PARA[,6:7]<-0.5
+  PARA[,5] <- PR
+  PARA[,6:7] <- 0.5
   
-  param<-PARA[which.min(PARA[,8]),-8]
-  param[param==0]<-1e-6
+  param <- PARA[which.min(PARA[,8]),-8]
+  param[param==0] <- 1e-6
   
   #2nd optimization over 8 parameters
-  L<-U<-rep(0,length(param))
-  L[sign(param)==-1]<-2*param[sign(param)==-1]
-  L[sign(param)==1]<-1e-2*param[sign(param)==1]
-  U[sign(param)==-1]<-1e-2*param[sign(param)==-1]
-  U[sign(param)==1]<-2*param[sign(param)==1]
-  CI<-c(L,-U)
-  UI<-rbind(diag(length(L)),-diag(length(L)))
+  L <- U<- rep(0, length(param))
+  L[sign(param)==-1] <- 2*param[sign(param)==-1]
+  L[sign(param)==1] <- 1e-2*param[sign(param)==1]
+  U[sign(param)==-1] <- 1e-2*param[sign(param)==-1]
+  U[sign(param)==1] <- 2*param[sign(param)==1]
+  CI <- c(L,-U)
+  UI <- rbind(diag(length(L)),-diag(length(L)))
   
-  solu<-constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$par
+  solu <- constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$par
   
-  CV[[m]]<-constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$convergence
+  CV[[m]] <- constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$convergence
   
   #conversion of (a,b) into (mu, sigma)
-  params[[m]]<-c(log(FWD)+(solu[1:2]-log(FWD))/T, solu[3:4]/sqrt(T), solu[5])
+  params[[m]] <- c(log(FWD)+(solu[1:2]-log(FWD))/T, solu[3:4]/sqrt(T), solu[5])
 }
 
 #European call & put prices, expected spot price as a function of a and b for a sum of 3 lognormals in B&S model
@@ -191,73 +185,73 @@ MSE<-function(x){
 }
 
 #weights on itm and otm options fixed for the moment at 0.5 each thus 1st optim on 8 parameters
-PR<-seq(0.1,1,0.01)                  #range of weights on the first two densities
-PR<-expand.grid(c(rep(list(PR),2)))
-PR<-PR[rowSums(PR)<0.9,]             #sum of the weights on the first two densities capped at 90%
+PR <- seq(0.1, 1, 0.01)                  #range of weights on the first two densities
+PR <- expand.grid(c(rep(list(PR), 2)))
+PR <- PR[rowSums(PR)<0.9,]             #sum of the weights on the first two densities capped at 90%
 
-objective<-function(x){
-  objective<-MSE(c(x[1:6],PR[i,1],PR[i,2],rep(0.5,2)))
+objective <- function(x){
+  objective <- MSE(c(x[1:6], PR[i,1], PR[i,2], rep(0.5, 2)))
 }
 
-mat<-c(charac$mat,nrow(options))
-params<-CV<-list()
+mat <- c(charac$mat, nrow(options))
+params <- CV <- list()
 
 #optimization
 for (m in 1:length(charac$terms)){
   
   #Elements of the option price function which are not random variables
-  T<-charac$terms[m]                              #maturity m
-  r<-rates_n[m]                                   #discount rate for maturity m
+  T <- charac$terms[m]                              #maturity m
+  r <- rates_n[m]                                   #discount rate for maturity m
   prices <- options %>%
     select(-put_strike) %>% slice(mat[m]:mat[m+1]) %>% mutate_if(is.character, as.numeric) %>% 
     na.omit %>% mutate_all(funs(./100))
-  C<-prices$call_price                            #prices of calls for maturity m
-  P<-prices$put_price                             #prices of puts for maturity m
-  KC<-KP<-prices$call_strike                      #strikes of puts and calls for maturity m
-  FWD<-charac$fut_price[m]/100                    #future price for maturity m
+  C <- prices$call_price                            #prices of calls for maturity m
+  P <- prices$put_price                             #prices of puts for maturity m
+  KC <- KP <- prices$call_strike                    #strikes of puts and calls for maturity m
+  FWD <- charac$fut_price[m]/100                    #future price for maturity m
   
   #Thus 1st optimization over first 8 parameters to get initialization values for second optim
-  PARA<-matrix(nrow=nrow(PR),ncol=12,dimnames=
-                 list(c(),c(paste0("m",seq(3)),paste0("s",seq(3)),paste0("p",seq(2)),paste0("w",seq(2)),"p1+p2","SCE")))
-  lower<-rep(c(-10,1e-6),each=3)
-  upper<-rep(c(10,0.8),each=3)
-  start<-rep(c(log(FWD),0.2),each=3)
+  PARA <- matrix(nrow = nrow(PR), ncol = 12, dimnames =
+                   list(c(),c(paste0("m",seq(3)), paste0("s",seq(3)), paste0("p",seq(2)), paste0("w",seq(2)),"p1+p2","SCE")))
+  lower <- rep(c(-10,1e-6), each=3)
+  upper <- rep(c(10,0.8), each=3)
+  start <- rep(c(log(FWD),0.2), each=3)
   
   for (i in 1:nrow(PR)){
-    sol<-nlminb(start=start,objective=objective,lower=lower, upper = upper, control=list(iter.max=500))
-    PARA[i,1:6]<-sol$par
-    PARA[i,12]<-sol$objective
+    sol <- nlminb(start=start,objective=objective,lower=lower, upper = upper, control=list(iter.max=500))
+    PARA[i, 1:6] <- sol$par
+    PARA[i, 12] <- sol$objective
   }
-  PARA[,7]<-PR[,1]
-  PARA[,8]<-PR[,2]
-  PARA[,9:10]<-0.5
-  PARA[,11]<-rowSums(PR)
-  param<-PARA[which.min(PARA[,12]),-12]
-  param[param==0]<-1e-6
+  PARA[,7] <- PR[,1]
+  PARA[,8] <- PR[,2]
+  PARA[,9:10] <- 0.5
+  PARA[,11] <- rowSums(PR)
+  param <- PARA[which.min(PARA[,12]),-12]
+  param[param==0] <- 1e-6
   
   #2nd optimization over 10 parameters
-  L<-U<-rep(0,length(param))
-  L[sign(param)==-1]<-2*param[sign(param)==-1]
-  L[sign(param)==1]<-1e-2*param[sign(param)==1]
-  U[sign(param)==-1]<-1e-2*param[sign(param)==-1]
-  U[sign(param)==1]<-2*param[sign(param)==1]
-  CI<-c(L,-U)
-  UI<-rbind(diag(length(L)),-diag(length(L)))
+  L <- U <- rep(0,length(param))
+  L[sign(param)==-1] <- 2*param[sign(param)==-1]
+  L[sign(param)==1] <- 1e-2*param[sign(param)==1]
+  U[sign(param)==-1] <- 1e-2*param[sign(param)==-1]
+  U[sign(param)==1] <- 2*param[sign(param)==1]
+  CI <- c(L, -U)
+  UI <- rbind(diag(length(L)),-diag(length(L)))
   
-  solu<-constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$par
+  solu <- constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$par
   
-  CV[[m]]<-constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$convergence
+  CV[[m]] <- constrOptim(param,MSE,NULL,ui=UI,ci=CI,mu=1e-05,control=list(iter.max=2000),method="Nelder-Mead")$convergence
   
   #conversion of (a,b) into (mu, sigma)
-  params[[m]]<-c(log(FWD)+(solu[1:3]-log(FWD))/T, solu[4:6]/sqrt(T), solu[7:8])
+  params[[m]] <- c(log(FWD)+(solu[1:3]-log(FWD))/T, solu[4:6]/sqrt(T), solu[7:8])
 }
 
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES########################################
 
 #Values of the densities
 range_px <- c(0.8,1.3)*range(as.numeric(options$call_strike),na.rm=T)/100
-PX<-seq(range_px[1],range_px[2],1e-4)                                  #prices to compute PDF and CDF
-params<-do.call(rbind,params)
+PX <- seq(range_px[1], range_px[2], 1e-4)                                  #prices to compute PDF and CDF
+params <- do.call(rbind, params)
 
 #Probability Density Function for any maturity for a sum of 2 or 3 lognormals
 PDF<-function(x){
@@ -266,64 +260,65 @@ PDF<-function(x){
                   (1-sum(x[7:8]))*dlnorm(PX,meanlog=x[3], sdlog=x[6])),
          return(x[5]*dlnorm(PX,meanlog=x[1], sdlog=x[3]) + (1-x[5])*dlnorm(PX,meanlog=x[2], sdlog=x[4])))}
 
-DNR<-apply(params,1,PDF)
-print(colSums(apply(DNR,2,rollmean,2)*diff(PX)))    #check that integral of PDF*dPX is worth 1
+DNR <- apply(params, 1, PDF)
+print(colSums(apply(DNR, 2, rollmean, 2)*diff(PX)))    #check that integral of PDF*dPX is worth 1
 
-#Graph of risk neutral densities for EURUSD prices
-co<-rainbow(nrow(charac))
-xlim<-range(PX)
-ylim<-range(DNR)
-series_1<-apply(replicate(nrow(charac),PX),2,list)
-series_2<-apply(DNR,2,list)
-series<-lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unlist(series_2[[x]])))
+#Graph of risk neutral densities
+co <- rainbow(nrow(charac))
+xlim <- range(PX)
+ylim <- range(DNR)
+series_1 <- apply(replicate(nrow(charac),PX),2,list)
+series_2 <- apply(DNR,2,list)
+series <- lapply(seq_along(series_1), function(x) cbind(unlist(series_1[[x]]), unlist(series_2[[x]])))
 
 nb_log <- 2
 nb_log[ncol(params)!=5] <- 3
 
 cex<-0.8
-par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-plot(NA,pch=20,xlab="",ylab="density",main=paste("RNDs from a mixture of",nb_log,"lognormals"),xlim=xlim,ylim=ylim,las=1)
-mapply(lines,series,col=co)
-title(sub="Treasury future price (% of par)",adj =1,line=2)
-legend("bottom", inset=c(-0.05,-0.3), legend=word(charac$matu,1), horiz=T,col=co, lty=1, bty="n")
+par(mar=c(8,4,4,4) + 0.1, xpd = T,cex.axis = cex)
+plot(NA, pch = 20, xlab = "", ylab = "density", main = paste("RNDs from a mixture of",nb_log,"lognormals"),
+     xlim = xlim, ylim = ylim, las = 1)
+mapply(lines, series, col = co)
+title(sub = "OAT future price (% of par)", adj = 1, line = 2)
+legend("bottom", inset = c(-0.05,-0.3), legend = word(charac$matu, 1), horiz = T, col = co, lty = 1, bty = "n")
 
 #######################  CALCULATION OF ACCRUED COUPON OF CTDs AT OPTION MATURITY ###########################
 
 #Loading futures contracts characteristics
-TYA_fut<-as.data.frame(read_excel("inputs/TYA_fut_characteristics.xlsx",1)) %>% 
-  rename(ticker ="Ticker", ctd_conv_factor = "FUT_CNVS_FACTOR", ctd_coupon="CPN", ctd_matu="MATURITY") %>% 
-  mutate(ticker= word(ticker,1)) %>% filter(ticker%in%charac$fut_contract) %>% 
+OATA_fut <- read_excel("inputs/OATA_fut_characteristics.xlsx", 1) %>% mutate(Ticker= word(Ticker,1)) %>% 
+  rename_with(~c("ticker", "ctd_conv_factor", "ctd_coupon", "ctd_matu")) %>% filter(ticker%in%charac$fut_contract) %>%
   mutate(ctd_matu = as.Date(ctd_matu,format = "%d/%m/%Y"))
-TYA_fut<-TYA_fut[match(charac$fut_contract,TYA_fut$ticker),]
+OATA_fut <- OATA_fut[match(charac$fut_contract,OATA_fut$ticker),]
 
-cp<-format(TYA_fut$ctd_matu, format="%m-%d")
-cp<-matrix(t(outer(2022:2024, cp, paste, sep="-")), nrow=nrow(TYA_fut), dimnames= list(c(),c("prev_cp","curr_cp","next_cp")))
-TYA_fut<-cbind(TYA_fut,cp)
-TYA_fut[,grep("cp", colnames(TYA_fut))]<-apply(TYA_fut[,grep("cp", colnames(TYA_fut))],2,as.Date)
-TYA_fut$option_matu<-as.Date(sub(").*","",word(charac$matu,-1)),format = "%m/%d/%y")    #dates de matu des options
+cp <- format(OATA_fut$ctd_matu, format="%m-%d")
+cp <- matrix(t(outer(2022:2024, cp, paste, sep="-")), nrow=nrow(OATA_fut), 
+             dimnames= list(c(),c("prev_cp","curr_cp","next_cp")))
+OATA_fut <- cbind(OATA_fut,cp)
+OATA_fut[,grep("cp", colnames(OATA_fut))] <- apply(OATA_fut[,grep("cp", colnames(OATA_fut))],2,as.Date)
+OATA_fut$option_matu <- as.Date(sub(").*","",word(charac$matu,-1)),format = "%m/%d/%y")    #dates de matu des options
 
 #by default, we set the last cp payment date before the option maturity to be the current year cp payment date
-cp_dat_ctd<-TYA_fut$curr_cp
+cp_dat_ctd <- OATA_fut$curr_cp
 
 #if option matu comes before the cp payment date of the year, we replace the last cp payment date with next one
-correc<-which(colnames(TYA_fut)=="curr_cp")+as.numeric(as.numeric(TYA_fut$option_matu)-TYA_fut$curr_cp>365)
-cp_dat_ctd<-as.Date(diag(as.matrix(TYA_fut[,correc])), origin='1970-1-1')
+correc <- which(colnames(OATA_fut)=="curr_cp")+as.numeric(as.numeric(OATA_fut$option_matu)-OATA_fut$curr_cp>365)
+cp_dat_ctd <- as.Date(diag(as.matrix(OATA_fut[,correc])), origin='1970-1-1')
 
-acc_p<-as.numeric(TYA_fut$option_matu-cp_dat_ctd)/365    #durée d'accrual à la date de matu
-CC<-TYA_fut$ctd_coupon*acc_p                             #le coupon couru de la CtD à la matu de l'option
+acc_p <- as.numeric(OATA_fut$option_matu-cp_dat_ctd)/365    #durée d'accrual à la date de matu
+CC <- OATA_fut$ctd_coupon*acc_p                             #le coupon couru de la CtD à la matu de l'option
 
 ####################  CONVERSION OF FUTURES PRICES INTO CTD PRICES THEN YIELDS AT MATU #######################
 
-P<-list()                                     #conversion des prix futures en prix de CtD à matu de l'option
-for (i in 1:nrow(TYA_fut)){
-  P[[i]]<-100*PX*TYA_fut$ctd_conv_factor[i]+CC[i]
+P <- list()                                     #conversion des prix futures en prix de CtD à matu de l'option
+for (i in 1:nrow(OATA_fut)){
+  P[[i]] <- 100*PX*OATA_fut$ctd_conv_factor[i] + CC[i]
 }
 
-N<-100+TYA_fut$ctd_coupon                                              #le flux payé à maturité par chaque CtD
+N <- 100 + OATA_fut$ctd_coupon                                              #le flux payé à maturité par chaque CtD
 
-years_c<-trunc(as.numeric(TYA_fut$ctd_matu-TYA_fut$option_matu)/365)   #le nb d'années de paiement de coupon par ctd (sf date finale)
+years_c<-trunc(as.numeric(OATA_fut$ctd_matu-OATA_fut$option_matu)/365)   #le nb d'années de paiement de coupon par ctd (sf date finale)
 
-cf <- split(rep(TYA_fut$ctd_coupon, years_c), rep(seq_along(years_c), years_c)) #les coupons (sauf le final) par CtD
+cf <- split(rep(OATA_fut$ctd_coupon, years_c), rep(seq_along(years_c), years_c)) #les coupons (sauf le final) par CtD
 
 #les termes des coupons et du ppal par CtD
 a <- sapply(1+years_c, seq, from=1)
@@ -336,42 +331,43 @@ term <- apply(term, 2, list)
 #le YTM par obligation à partir de son prix, pour tous les prix possibles de chaque distribution
 require('tvm')
 tri<-list()
-for (j in 1:nrow(TYA_fut)){
+for (j in 1:nrow(OATA_fut)){
   tri[[j]]<-list()
   for (i in 1:length(P[[j]])){
-    tri[[j]][[i]]<-xirr(cf=c(-P[[j]][[i]],cf[[j]],N[j]),tau=c(0,term[[j]]),comp_freq=1,interval=c(0, 20))}
+    tri[[j]][[i]]<-xirr(cf=c(-P[[j]][[i]],cf[[j]],N[j]),tau=c(0,term[[j]][[1]]),comp_freq=1,interval=c(0, 20))}
   tri[[j]]<-unlist(tri[[j]])}
-tri<-do.call(cbind,tri)
+tri <- do.call(cbind,tri)
 
 
 ##########################  GRAPHS OF DENSITIES OF YTM AT OPTION MATURITIES #############################
 
 #average ytm from RNDs
-E_y<-colSums(apply(tri*DNR,2,rollmean,k=2)*diff(PX))
+E_y <- colSums(apply(tri*DNR, 2, rollmean, k = 2)*diff(PX))
 
 #check that yields are close to yields from delivery prices from futures prices
-PX_liv<-charac$fut_price*TYA_fut$ctd_conv_factor+CC   #on calcule un prix de livraison à des dates avant la livraison aussi
+PX_liv <- charac$fut_price*OATA_fut$ctd_conv_factor + CC   #on calcule un prix de livraison à des dates avant la livraison aussi
 
 #taux moyens implicites aux futures. NB: seule la moyenne est récupérable ici, pas la distribution
-y_fut<-list()
+y_fut <- list()
 for (i in 1:length(term)){
-  y_fut[[i]]<-xirr(cf=c(-(PX_liv[[i]]),cf[[i]],N[[i]]), tau = c(0,term[[i]]), comp_freq = 1, interval = c(0, 10))}
+  y_fut[[i]] <- xirr(cf=c(-(PX_liv[[i]]),cf[[i]],N[[i]]), tau = c(0,term[[i]][[1]]), comp_freq = 1, interval = c(0, 10))}
 
 #ecart entre les distributions fittées et le taux implicite au future
-ecart<-unlist(y_fut)-E_y
+ecart <- unlist(y_fut) - E_y
 #on décale toute la distribution de cet écart
 for (i in (1:nrow(params))){
-  tri[[i]]<-tri[[i]]+ecart[i]}
+  tri[[i]] <- tri[[i]] + ecart[i]}
 
 #graph de densité des taux implicites
-co<-rainbow(nrow(charac))
-xlim<-100*range(tri, na.rm=T)
-series_1_rev<-apply(tri,2,list)
-series_rev<-lapply(seq_along(series_1_rev), function(x) cbind(100*unlist(series_1_rev[[x]]), unlist(series_2[[x]])))
+co <- rainbow(nrow(charac))
+xlim <- 100*range(tri, na.rm=T)
+series_1_rev <- apply(tri, 2, list)
+series_rev <- lapply(seq_along(series_1_rev), function(x) cbind(100*unlist(series_1_rev[[x]]), unlist(series_2[[x]])))
 
-par(mar=c(7,4,4,4) + 0.1, xpd=T, cex.axis=cex)
-plot(NA, pch=20, xlab="UST future yield (%)",ylab="density",xlim=xlim,ylim=ylim,las=1,main="RNDs from a mixture of 2 lognormals")
-mapply(lines,series_rev,col=co)
+par(mar = c(7,4,4,4) + 0.1, xpd = T, cex.axis = cex)
+plot(NA, pch = 20, xlab = "OAT future yield (%)", ylab = "density", xlim = xlim, ylim = ylim, las = 1,
+     main = "RNDs from a mixture of 2 lognormals")
+mapply(lines, series_rev, col = co)
 legend("bottom", inset = c(-0.05,-0.2), legend = word(charac$matu,1), horiz = T, col=co, lty = 1, bty = "n")
 
 #Cumulative Density Function for any maturity for a sum of 2 or 3 lognormals
