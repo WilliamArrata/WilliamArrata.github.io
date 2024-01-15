@@ -1,47 +1,40 @@
 ##############  WILLIAM ARRATA - RISK NEUTRAL DENSITY ON EURIBOR FUTURES OPTIONS - WINTER 2023  #############
 
 require("pacman")
-pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo","dplyr","tidyr")
+pacman::p_load("stringr", "Hmisc", "stats", "readxl", "data.table", "zoo", "dplyr", "tidyr", "janitor")
 
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
-options<-as.data.frame(read_excel("inputs/ERA_options_31_mai_2023.xlsx",1))  %>% 
-  rename(call_strike="Calls", call_price="...5", put_strike="...8", put_price="...12") %>% 
-  select(c(call_strike,call_price,put_strike,put_price)) %>% 
-  mutate_if(is.character, ~replace_na(.,"matu"))
+options<-as.data.frame(read_excel("inputs/ERA_options_31_mai_2023.xlsx",1))  %>% row_to_names(row_number = 1) %>% 
+  clean_names() %>% select(contains(c("strike", "last"))) %>% mutate_if(is.character, ~replace_na(.,"matu")) %>% 
+  rename_with(~c("call_strike", "put_strike", "call_price", "put_price")) %>% mutate_if(is.character, as.numeric)
 
 #2. Futures contracts prices and maturities
-charac <- options %>% mutate(mat = row_number()) %>% filter(call_price=="matu") %>% 
-  select(call_strike, mat) %>% mutate(matu = word(call_strike, 1, 3)) %>% 
-  mutate(terms = as.numeric(gsub('[^0-9.-]','',word(matu,2)))/365) %>% mutate(fut_contract = word(call_strike,-2)) %>%
-  mutate(fut_price = word(call_strike, -1)) %>% mutate(fut_price = as.numeric(fut_price)) %>% select(-call_strike)
+charac <- options %>% mutate(mat = row_number()) %>% filter(call_price=="matu") %>% mutate(matu = word(call_strike, 1, 3)) %>% 
+  mutate(terms = as.numeric(gsub('[^0-9.-]','', word(matu, 2)))/365, fut_contract = word(call_strike,-2)) %>% 
+  mutate(fut_price = as.numeric( word(call_strike, -1))) %>%  select(-colnames(options))
 
 #graph option prices for the most remote maturity
-graph <- options %>% 
-  select(-put_strike) %>% 
-  mutate_if(is.character, as.numeric) %>% 
-  slice((last(charac$mat)+1):nrow(options))
+last_mat <- options %>% slice((last(charac$mat)+1):nrow(options))
 
-cex<-0.8
-col<-c("lightblue","indianred")
+cex <- 0.8
+col <- c("lightblue","indianred")
 par(mar=c(6,4,4,4) + 0.1, xpd=T, cex.axis=cex)
-plot(graph[,1:2],xlim=range(graph[,1],na.rm=T),ylim=range(graph[,2:3],na.rm=T),col=col[1],type="l",
-     main=paste(word(last(charac$matu),1),"Euribor 3M options prices at all strikes, 05/31/2023",sep=" "),
-     pch=20,xlab="",ylab="option premium (EUR)")
-lines(graph[,c(1,3)], col=col[2])
+plot(last_mat$call_strike, last_mat$call_price, xlim = range(c(last_mat$call_strike, last_mat$put_strike)),
+     ylim = range( c(last_mat$call_price, last_mat$put_price) ), col=col[1], type="l", pch=20, xlab=" ",
+     main = paste(word(last(charac$matu),1),"Euribor 3 mth option prices at all strikes, 05/31/2023",sep=" "),
+     ylab = "option premium (EUR)")
+lines(last_mat$put_strike, last_mat$put_price, col=col[2])
 title(xlab="strike price (EUR)",adj=1)
-legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.25),legend=c("calls","puts"),lty=1,text.col=col,col=col)
+legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.35),legend=c("calls","puts"),lty=1,text.col=col,col=col)
 
 #3. Riskfree rates at options' maturities (discount prices)
-rates <- as.data.frame(read_excel("inputs/EUR_rates.xlsx")) %>% mutate_if(is.character, as.numeric)
+rates <- read_excel("inputs/EUR_rates.xlsx") %>% mutate_if(is.character, as.numeric)
 
 #get by linear extrapolation a risk free rate at each option maturity
-rates_n<-list()
-for (i in 1:nrow(charac)){
-  rates_n[[i]]<-approxExtrap(rates$term, rates$Yield, xout=charac$terms[i], method = "linear",
-                             n = 50, rule = 2, f = 0, ties = "ordered", na.rm = FALSE)$y}
-rates_n<-unlist(rates_n)/100
+rates_n <- approxExtrap(rates$term, rates$Yield, xout=charac$terms, method = "linear", n = 50, rule = 2, f = 0, 
+                        ties = "ordered", na.rm = FALSE)$y/100
 
 ###############################  CALIBRATION OF PARAMETERS  ##########################################
 
@@ -203,7 +196,7 @@ params<-CV<-list()
 
 #optimization
 for (m in 1:length(charac$terms)){
-
+  
   #Elements of the option price function which are not random variables
   T<-charac$terms[m]                              #maturity m
   r<-rates_n[m]                                   #discount rate for maturity m
@@ -304,7 +297,7 @@ legend("bottom", inset = c(-0.05,-0.45), legend = word(charac$matu,1), ncol=6,co
 CDF<-function(x){
   ifelse (ncol(params)!=5,
           return(x[7]*plnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*plnorm(PX,meanlog=x[2], sdlog=x[5])+
-             (1-x[7]-x[8])*plnorm(PX,meanlog = x[3], sdlog = x[6])),
+                   (1-x[7]-x[8])*plnorm(PX,meanlog = x[3], sdlog = x[6])),
           return(x[5]*plnorm(PX,meanlog=x[1], sdlog=x[3])+(1-x[5])*plnorm(PX,meanlog=x[2], sdlog=x[4])))}
 
 #Graph of cumulative density functions for rates
@@ -342,11 +335,25 @@ for (i in 1:nrow(params)){
 quantiles<-as.data.frame(cbind(charac$terms,1-do.call(rbind,quantiles)))
 colnames(quantiles)<-c("term",rev(paste0("q",nb_q*thres)))
 
-#illustration
-par(mar=c(6,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-plot(100*(1-rev(PX)),DNR_rev[,7], xlab="3 mth Euribor future rate (%)",ylab="density",type="l",xlim=xlim_r,
+#Graph #1: quantiles
+colors<-c("#FF0000A0", "white", "#0000FFA0")
+par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
+plot(100*(1-rev(PX)), DNR_rev[,7], xlab="3 mth Euribor future price",ylab="density",type="l", xlim = xlim_r,
      ylim=range(DNR_rev[,7]),las=1, main=paste(word(charac$matu[7],1), paste("RNDs from a mixture of",nb_log,"lognormals"),sep=" "))
 polygon(100*c(1-rev(PX)[1-rev(PX)>=quantiles$q75[7]], max(1-rev(PX)), quantiles$q75[7]),
         c(DNR_rev[1-rev(PX)>=quantiles$q75[7],7], 0, 0), col="red")
 polygon(100*c(quantiles$q5[7], min(1-rev(PX)), 1-rev(PX)[1-rev(PX)<=quantiles$q5[7]]),
         c(0, 0, DNR_rev[1-rev(PX)<=quantiles$q5[7],7]), col="blue")
+legend("bottom", horiz = T, inset = -0.4, title="Probability", legend = c("(0, 0.05]", "(0.05, 0.75]", "(0.75, 1]"), fill=colors, bty = "n")
+
+#Graph #2: proba associated to a quantile
+par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
+q<-c(1.00,1.15)          #we define two quantiles of interest
+plot(PX,DNR[,7], xlab="Euribor 3 mth future price",ylab="density",type="l",xlim=xlim, ylim=range(DNR[,7]),
+     las=1, main=paste(word(charac$matu[7],1), "RND from a mixture of 2 lognormals",sep=" "))
+polygon(c(PX[PX>=q[2]], max(PX), q[2]),c(DNR[PX>=q[2],7], 0, 0), col=colors[3], border=colors[3])
+polygon(c(q[1], min(PX), PX[PX<=q[1]]),c(0, 0, DNR[PX<=q[1],7]), col=colors[1], border=colors[1])
+N<-100*c(round(NCDF[min(which(PX>=q[1])),7],2),1-round(NCDF[min(which(PX>=q[2])),7],2))
+legend("bottom", horiz = T, inset = -0.4, title="Probability of being", fill=colors[-2], bty = "n",
+       legend=c(as.expression(bquote(paste("below ",.(q[1]) == .(N[1]), " %"))),
+                bquote(paste("above ",.(q[2]) == .(N[2]), " %"))))
