@@ -8,7 +8,7 @@ pacman::p_load("tseries","readxl","dplyr", "tidyr", "data.table", "ggplot2")
 
 #I load the data
 returns <- as.matrix(read_excel("stock_prices.xlsx") %>%  select_if(is.numeric) %>%  mutate_all(~ ( (.) - shift(.))/(.)) %>% 
-                       na.omit() %>% rename_with(~gsub(" Equity","", (.)) ))
+  na.omit() %>% rename_with(~gsub(" Equity","", (.)) ))
 mean <- 252*matrix(colMeans(returns))                             #annualized expected returns
 sig <- 252*cov(returns)                                           #annualized covariances
 
@@ -181,29 +181,28 @@ legend("bottom", horiz = T, inset = c(0,-0.35), legend = c("Minimum variance fro
        text.col = c("indianred","lightblue"), col = c("indianred","lightblue"), bty="n", lty=1)
 
 #Graph minimum variance frontier and efficient frontier with ggplot2
-ggplot(100*ptfs, aes(vol,return)) +
-  xlim(c(95,105)*range(ptfs$vol)) + ylim(c(95,105)*range(ptfs$return)) +
-  geom_point(aes(color = "Efficient Frontier")) +
-  geom_line(data = 100*effi, aes(color = "Minimum Variance frontier"), size = 1) +
-  geom_point(data = 100*ptfs[c(low,high),], aes(vol, return), size = 2) +
-  annotate("text", x = 100*ptfs$vol[low], y = 100*ptfs$return[low], hjust = -0.1, vjust=0.2, label = 
+ggplot(ptfs, aes(vol,return)) +  geom_point(aes(color = "Minimum Variance Frontier")) +
+  geom_line(data = effi, aes(color = "Efficient frontier"), size = 1) +
+  geom_point(data = ptfs[c(low,high),], aes(vol, return), size = 2) +
+  annotate("text", x = ptfs$vol[low], y = ptfs$return[low], hjust = -0.1, vjust=0.2, label = 
              bquote(mu[0]== .(round(ptfs$return[low]*100, 1)) ~ "% ;"~ sigma[0] == .(round(ptfs$vol[low]*100, 1))~"%")) +
-  annotate("text", x = 100*ptfs$vol[high], y = 100*ptfs$return[high], hjust = -0.1, vjust=0.2, label = 
+  annotate("text", x = ptfs$vol[high], y = ptfs$return[high], hjust = -0.1, vjust=0.2, label = 
              bquote(mu[1]== .(round(ptfs$return[high]*100, 1)) ~ "% ;"~ sigma[1] == .(round(ptfs$vol[high]*100, 1))~"%")) +
-  labs(x="standard deviation (%)", y="expected return (%)") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm"))
+  labs(x="standard deviation", y="expected return") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) +
+  scale_y_continuous(labels = scales::percent) +  scale_x_continuous(labels = scales::percent)
 
 ggplot() +
-  xlim(c(95,105)*range(ptfs$vol)) + ylim(c(95,105)*range(ptfs$return)) +
-  geom_segment(data = 100*ptfs, aes(x = vol, xend = dplyr::lead(vol),
-                                    y = return, yend = dplyr::lead(return)), size = 2.5, color="lightblue") +
-  geom_segment(data = 100*effi, aes(x = vol, xend = dplyr::lead(vol),
-                                    y = return, yend = dplyr::lead(return)), size = 1, color="indianred") +
-  geom_point(data = 100*ptfs[c(low,high),], aes(vol, return), color="black", size = 3) +
-  annotate("text", x = 100*ptfs$vol[low], y = 100*ptfs$return[low], hjust = -0.1, vjust=0.2, label = 
+  geom_segment(data = ptfs, aes(x = vol, xend = dplyr::lead(vol), y = return, yend = dplyr::lead(return)), 
+               size = 2.5, color="lightblue") +
+  geom_segment(data = effi, aes(x = vol, xend = dplyr::lead(vol), y = return, yend = dplyr::lead(return)), 
+               size = 1, color="indianred") +
+  geom_point(data = ptfs[c(low,high),], aes(vol, return), color="black", size = 3) +
+  annotate("text", x = ptfs$vol[low], y = ptfs$return[low], hjust = -0.1, vjust=0.2, label = 
              bquote(mu[0]== .(round(ptfs$return[low]*100, 1)) ~ "% ;"~ sigma[0] == .(round(ptfs$vol[low]*100, 1))~"%")) +
-  annotate("text", x = 100*ptfs$vol[high], y = 100*ptfs$return[high], hjust = -0.1, vjust=0.2, label = 
+  annotate("text", x = ptfs$vol[high], y = ptfs$return[high], hjust = -0.1, vjust=0.2, label = 
              bquote(mu[1]== .(round(ptfs$return[high]*100, 1)) ~ "% ;"~ sigma[1] == .(round(ptfs$vol[high]*100, 1))~"%")) +
-  labs(x="standard deviation (%)", y="expected return (%)") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm"))
+  labs(x="standard deviation", y="expected return") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) +
+  scale_y_continuous(labels = scales::percent) +  scale_x_continuous(labels = scales::percent)
 
 
 #2. Efficient frontier when short selling is forbidden
@@ -225,17 +224,15 @@ legend("bottom",horiz=T,inset = c(0,-0.35),legend=c("Minimum variance frontier",
        text.col=c("indianred","darkblue"),col=c("indianred","darkblue"),lty=1, bty="n")
 
 #Graph minimum variance frontier and efficient frontier with ggplot2
-ggplot(100*ptfs_no_s, aes(vol,return)) +
-  xlim(c(95,105)*range(ptfs_no_s$vol)) + ylim(c(95,105)*range(ptfs_no_s$return)) +
-  geom_point(aes(color = "efficient Frontier")) +
-  geom_line(data = 100*effi_no_s, aes(color = "Minimum Variance frontier"), size = 1) +
-  geom_point(data = 100*ptfs_no_s[c(low_no_s,high_no_s),], aes(vol, return), size = 2) +
-  annotate("text", x = 100*ptfs_no_s$vol[low_no_s], y = 100*ptfs_no_s$return[low_no_s], hjust = -0.1, vjust=0.2, label = 
+ggplot(ptfs_no_s, aes(vol,return)) +  geom_point(aes(color = "Minimum Variance Frontier")) +
+  geom_line(data = effi_no_s, aes(color = "Efficient frontier"), size = 1) +
+  geom_point(data = ptfs_no_s[c(low_no_s,high_no_s),], aes(vol, return), size = 2) +
+  annotate("text", x = ptfs_no_s$vol[low_no_s], y = ptfs_no_s$return[low_no_s], hjust = -0.1, vjust=0.2, label = 
              bquote(mu[0]== .(round(ptfs_no_s$return[low_no_s]*100, 1)) ~ "% ;"~ sigma[0] == .(round(ptfs_no_s$vol[low_no_s]*100, 1))~"%")) +
-  annotate("text", x = 100*ptfs_no_s$vol[high_no_s], y = 100*ptfs_no_s$return[high_no_s], hjust = -0.1, vjust=0.2, label = 
+  annotate("text", x = ptfs_no_s$vol[high_no_s], y = ptfs_no_s$return[high_no_s], hjust = -0.1, vjust=0.2, label = 
              bquote(mu[1]== .(round(ptfs_no_s$return[high_no_s]*100, 1)) ~ "% ;"~ sigma[1] == .(round(ptfs_no_s$vol[high_no_s]*100, 1))~"%")) +
-  labs(x = "standard deviation (%)", y = "expected return (%)", color = "") +
-  theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm"))
+  labs(x = "standard deviation", y = "expected return") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) +
+  scale_y_continuous(labels = scales::percent) +  scale_x_continuous(labels = scales::percent)
 
 #Weights for each target return
 cum_w<-apply(ptfs_no_s[,grep("w",colnames(ptfs_no_s))],1,cumsum)
