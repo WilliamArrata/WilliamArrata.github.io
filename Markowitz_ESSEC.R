@@ -12,7 +12,6 @@ returns <- as.matrix(read_excel("stock_prices.xlsx") %>%  select_if(is.numeric) 
 mean <- 252*matrix(colMeans(returns))                             #annualized expected returns
 sig <- 252*cov(returns)                                           #annualized covariances
 
-
 ###########################   OPTIMAL PORTFOLIOS FOR SOME TARGET EXPECTED RETURNS   #########################
 
 #1. short selling allowed
