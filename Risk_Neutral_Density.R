@@ -1,14 +1,12 @@
-##############  WILLIAM ARRATA - RISK NEUTRAL DENSITY ON EURIBOR FUTURES OPTIONS - WINTER 2023  #############
-
 require("pacman")
-pacman::p_load("stringr", "Hmisc", "stats", "readxl", "data.table", "zoo", "dplyr", "tidyr", "janitor")
+pacman::p_load("stringr","Hmisc","stats","readxl","data.table","zoo","dplyr","tidyr","janitor", "gplot2")
 
 ##########################################   DOWNLOAD DATA    ##########################################
 
 #1. Options prices
 options<-as.data.frame(read_excel("inputs/ERA_options_31_mai_2023.xlsx",1))  %>% row_to_names(row_number = 1) %>% 
   clean_names() %>% select(contains(c("strike", "last"))) %>% mutate_if(is.character, ~replace_na(.,"matu")) %>% 
-  rename_with(~c("call_strike", "put_strike", "call_price", "put_price")) %>% mutate_if(is.character, as.numeric)
+  rename_with(~c("call_strike", "put_strike", "call_price", "put_price"))
 
 #2. Futures contracts prices and maturities
 charac <- options %>% mutate(mat = row_number()) %>% filter(call_price=="matu") %>% mutate(matu = word(call_strike, 1, 3)) %>% 
@@ -16,7 +14,7 @@ charac <- options %>% mutate(mat = row_number()) %>% filter(call_price=="matu") 
   mutate(fut_price = as.numeric( word(call_strike, -1))) %>%  select(-colnames(options))
 
 #graph option prices for the most remote maturity
-last_mat <- options %>% slice((last(charac$mat)+1):nrow(options))
+last_mat <- options %>% mutate_if(is.character, as.numeric) %>% slice((last(charac$mat)+1):nrow(options))
 
 cex <- 0.8
 col <- c("lightblue","indianred")
@@ -196,7 +194,7 @@ params<-CV<-list()
 
 #optimization
 for (m in 1:length(charac$terms)){
-  
+
   #Elements of the option price function which are not random variables
   T<-charac$terms[m]                              #maturity m
   r<-rates_n[m]                                   #discount rate for maturity m
@@ -287,17 +285,25 @@ series_rev_2<-apply(DNR_rev,2,list)
 series_rev<-lapply(seq_along(series_rev_1),
                    function(x) cbind(unlist(series_rev_1[[x]]), unlist(series_rev_2[[x]])))
 
+#graph base plot
 par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
 plot(NA, pch=20, xlab="", ylab="density", xlim=xlim_r, ylim=ylim, las=1, main=paste("RNDs from a mixture of",nb_log,"lognormals"))
 mapply(lines,series_rev,col=co)
 title(sub="3 mth Euribor future rate (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.45), legend = word(charac$matu,1), ncol=6,col=co, lty = 1, bty = "n")
 
+#graph ggplot2
+DN <- bind_cols(x=rep(1-rev(PX),ncol(DNR_rev)),y=c(DNR_rev), group=rep(letters[1:ncol(DNR_rev)], each=nrow(DNR_rev)))
+
+ggplot(data = DN, aes(x = x, fill = group)) + geom_line(aes(y = y), color = "blue") + theme_light() +
+  labs(x = paste0('Euribor 3 mth future ', word(charac$matu, 1)), y = 'probability density') +
+  theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) 
+
 #Cumulative Density Function for any maturity for a sum of 2 or 3 lognormals
 CDF<-function(x){
   ifelse (ncol(params)!=5,
           return(x[7]*plnorm(PX,meanlog=x[1], sdlog=x[4]) + x[8]*plnorm(PX,meanlog=x[2], sdlog=x[5])+
-                   (1-x[7]-x[8])*plnorm(PX,meanlog = x[3], sdlog = x[6])),
+             (1-x[7]-x[8])*plnorm(PX,meanlog = x[3], sdlog = x[6])),
           return(x[5]*plnorm(PX,meanlog=x[1], sdlog=x[3])+(1-x[5])*plnorm(PX,meanlog=x[2], sdlog=x[4])))}
 
 #Graph of cumulative density functions for rates
@@ -332,28 +338,30 @@ for (i in 1:nrow(params)){
   quantiles[[i]]<-unlist(quantiles[[i]])
 }
 
-quantiles<-as.data.frame(cbind(charac$terms,1-do.call(rbind,quantiles)))
-colnames(quantiles)<-c("term",rev(paste0("q",nb_q*thres)))
+quantiles <- bind_cols(rep(charac$terms, lengths(quantiles)), 1-unlist(quantiles),
+                       rep(rev(paste0("q",nb_q*thres)), length(quantiles))) %>% rename_all(~c("term", "value", "quantile"))
 
-#Graph #1: quantiles
-colors<-c("#FF0000A0", "white", "#0000FFA0")
-par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-plot(100*(1-rev(PX)), DNR_rev[,7], xlab="3 mth Euribor future price",ylab="density",type="l", xlim = xlim_r,
+ggplot(quantiles, aes(term, value, fill = quantile)) +  geom_line() +
+  labs(x = "term (years)", y = "value (%)") + theme(plot.margin = margin(1.2,.5,1.2,.5, "cm"))
+
+
+#graph base plot
+par(mar=c(6,4,4,4) + 0.1, xpd=T,cex.axis=cex)
+plot(100*(1-rev(PX)),DNR_rev[,7], xlab="3 mth Euribor future rate (%)",ylab="density",type="l",xlim=xlim_r,
      ylim=range(DNR_rev[,7]),las=1, main=paste(word(charac$matu[7],1), paste("RNDs from a mixture of",nb_log,"lognormals"),sep=" "))
 polygon(100*c(1-rev(PX)[1-rev(PX)>=quantiles$q75[7]], max(1-rev(PX)), quantiles$q75[7]),
         c(DNR_rev[1-rev(PX)>=quantiles$q75[7],7], 0, 0), col="red")
 polygon(100*c(quantiles$q5[7], min(1-rev(PX)), 1-rev(PX)[1-rev(PX)<=quantiles$q5[7]]),
         c(0, 0, DNR_rev[1-rev(PX)<=quantiles$q5[7],7]), col="blue")
-legend("bottom", horiz = T, inset = -0.4, title="Probability", legend = c("(0, 0.05]", "(0.05, 0.75]", "(0.75, 1]"), fill=colors, bty = "n")
+legend("bottom", horiz = T, inset = -0.45, title="Probability", legend = c("(0, 0.05]", "(0.05, 0.75]", "(0.75, 1]"), 
+       fill = c("blue", "white", "red"), bty = "n")
 
-#Graph #2: proba associated to a quantile
-par(mar=c(8,4,4,4) + 0.1, xpd=T,cex.axis=cex)
-q<-c(1.00,1.15)          #we define two quantiles of interest
-plot(PX,DNR[,7], xlab="Euribor 3 mth future price",ylab="density",type="l",xlim=xlim, ylim=range(DNR[,7]),
-     las=1, main=paste(word(charac$matu[7],1), "RND from a mixture of 2 lognormals",sep=" "))
-polygon(c(PX[PX>=q[2]], max(PX), q[2]),c(DNR[PX>=q[2],7], 0, 0), col=colors[3], border=colors[3])
-polygon(c(q[1], min(PX), PX[PX<=q[1]]),c(0, 0, DNR[PX<=q[1],7]), col=colors[1], border=colors[1])
-N<-100*c(round(NCDF[min(which(PX>=q[1])),7],2),1-round(NCDF[min(which(PX>=q[2])),7],2))
-legend("bottom", horiz = T, inset = -0.4, title="Probability of being", fill=colors[-2], bty = "n",
-       legend=c(as.expression(bquote(paste("below ",.(q[1]) == .(N[1]), " %"))),
-                bquote(paste("above ",.(q[2]) == .(N[2]), " %"))))
+#graph ggplot2
+cutoff <- quantile(1-rev(PX), probs = 0.75)
+hist.y <- data.frame(x = 1-rev(PX), y = DNR_rev[,6]) %>% mutate(area = x > cutoff)
+
+ggplot(data = hist.y, aes(x = x, ymin = 0, ymax = y, fill = area)) + geom_ribbon() + geom_line(aes(y = y)) +
+  geom_vline(xintercept = cutoff) + annotate(geom = 'text', x = cutoff, y = 0.025, label = 'VaR 75%', hjust = -0.1) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(x = paste0('Euribor 3 mth future ', word(charac$matu, 1)[2]), y = 'probability density') +
+  theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) 
