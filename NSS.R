@@ -5,37 +5,72 @@ pacman::p_load("nloptr","readxl","dplyr","tidyr")
 
 ################################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL  ################################
 
+#Influence of the different parameters on the shape of the curve:
+
+#the matrix of coefficients
+coeff <- as.data.frame(matrix(t(replicate(4, c(0.02, 0.003, 0.4, "", "", 0.6))), nrow=4, dimnames = 
+                                list(c(),c("beta_1", "beta_2", "beta_3", "beta_4", "lambda_1", "lambda_2"))))
+#varying the values of beta_3 and lambda_1
+coeff_2 <- coeff_3 <- coeff
+
+coeff_2$beta_4 <- c(0.00002, 0.05,0.2, 0.4)
+coeff_2$lambda_1 <- 100
+coeff_2 <- data.frame(apply(coeff_2, 2, as.numeric))
+
+coeff_3$beta_4 <- 0.02
+coeff_3$lambda_1 <- c(40, 60, 80, 100)
+coeff_3 <- data.frame(apply(coeff_3, 2, as.numeric))
+
+matu<-(1:120)/12
+
+NSS_test <- function(x, coeff){
+  curve<-matrix(nrow=nrow(coeff), ncol=length(matu))
+  for (i in 1: nrow(coeff)){
+    curve[i, ] <- coeff$beta_1[i] + coeff$beta_2[i]*(1-exp(-x/coeff$lambda_1[i]))/(x/coeff$lambda_1[i]) +
+      coeff$beta_3[i]*((1-exp(-x/coeff$lambda_1[i]))/(x/coeff$lambda_1[i])-exp(-x/coeff$lambda_1[i])) +
+      coeff$beta_4[i]*((1-exp(-x/coeff$lambda_2[i]))/(x/coeff$lambda_2[i])-exp(-x/coeff$lambda_2[i]))}
+  return(curve)
+}
+
+plot(matu, 100*NSS_test(matu, coeff_2)[1, ], type="l", ylim = 110*range(NSS_test(matu, coeff_2)), xlab="term", ylab="ytm (%)")
+apply(100*NSS_test(matu, coeff_2), 1, function(x, t) lines(matu, x), t=t)
+text(x = matu[24], y = 120*NSS_test(matu, coeff_2)[,24], label = parse(text = sprintf("beta[4] == %s", coeff_2$beta_4)))
+
+plot(matu, 100*NSS_test(matu, coeff_3)[1, ], type="l", ylim = 110*range(NSS_test(matu, coeff_3)), xlab="term", ylab="ytm (%)")
+apply(100*NSS_test(matu, coeff_3), 1, function(x, t) lines(matu, x), t=t)
+text(x = matu[100], y = 100*NSS_test(matu, coeff_2)[,100], label = parse(text = sprintf("lambda[1] == %s", coeff_3$lambda_1)))
+
+################################         CALIBRATION OF PARAMETERS           ################################
+
 #I load the data
-data<-as.data.frame(read_excel("French_bonds_06_10_2023.xlsx",1)) %>% 
-  select(c("Maturity","Ask Yield to Maturity","Series")) %>%
-  filter(!Series%in%c("OATe","OATi")) %>% 
-  rename(mat="Maturity",ytm="Ask Yield to Maturity") %>% 
-  mutate(mat=as.Date(mat, format= "%d/%m/%Y"),term=(mat-as.Date("2023-10-06"))/365, term=as.numeric(term), ytm=ytm/100) %>% 
-  select(c(term,ytm)) %>% filter(term<=10)
+data <- read_excel("French_bonds_06_10_2023.xlsx",1) %>% filter(!Series%in%c("OATe","OATi")) %>%
+  select(c("Maturity","Ask Yield to Maturity")) %>% rename_all(~c("term","ytm")) %>% 
+  mutate(term = (as.Date(term, format= "%d/%m/%Y") - as.Date("2023-10-06"))/365) %>% 
+  mutate(term = as.numeric(term), ytm = ytm/100) %>% filter(term<=10)
 
 #Defining the 6 parameters of the NSS model
 
-#bet3, beta 4, lambda 1 and lambda 2 have to be found out so we first create a grid of parameters
-a<-seq(from =0, to = 0.16, by =0.04)
-aa<-seq(from =-0.1, to = 0, by =0.02)
-b<-seq(from = 3.3, to = 6.3, by =1)
-bb<-seq(from = 0.3, to = 2.4, by = 0.70)
-param<-list(a,aa,b,bb)
-h<-expand.grid(param)
+#beta3, beta 4, lambda 1 and lambda 2 have to be found out so we first create a grid of parameters
+a <- seq(from =0, to = 0.16, by =0.04)
+aa <- seq(from =-0.1, to = 0, by =0.02)
+b <- seq(from = 3.3, to = 6.3, by =1)
+bb <- seq(from = 0.3, to = 2.4, by = 0.70)
+param <- list(a,aa,b,bb)
+h <- expand.grid(param)
 
-comb<-array(dim=c(1,6,dim(h)[1]))                   #All possible param combinations
-comb[,1,]<-data$ytm[nrow(data)]                     #First param is the longest term bond rate (trailing maturity)
-comb[,2,]<-diff(data$ytm[c(nrow(data),1)])          #Second param = ST - LT bond rate
-comb[,3:dim(comb)[2],]<-t(h)
+comb <- array(dim=c(1, 6, dim(h)[1]))                   #All possible param combinations
+comb[,1,] <- data$ytm[nrow(data)]                     #First param is the longest term bond rate (trailing maturity)
+comb[,2,] <- diff(data$ytm[c(nrow(data), 1)])          #Second param = ST - LT bond rate
+comb[,3:dim(comb)[2],] <- t(h)
 
 #Computing the sum of squares  - grid search
-GSS1<-function(x,m,r){
-  NSS1<-SQ1<-array(dim=c(1,nrow(data),dim(h)[1]))
-  SSQ1<-matrix(nrow=dim(SQ1)[1], ncol=dim(SQ1)[3])
+GSS1 <- function(x, m, r){
+  NSS1 <- SQ1 <- array(dim = c(1, nrow(data), dim(h)[1]))
+  SSQ1 <- matrix(nrow = dim(SQ1)[1], ncol = dim(SQ1)[3])
   
   #expression pour chaque terme du taux théorique
   for (i in 1:dim(NSS1)[2]){
-    NSS1[,i,]<-x[,1,]+x[,2,]*(1-exp(-m[,i,]/x[,5,]))/(m[,i,]/x[,5,])+
+    NSS1[,i,] <- x[,1,] + x[,2,]*(1-exp(-m[,i,]/x[,5,]))/(m[,i,]/x[,5,])+
       x[,3,]*((1-exp(-m[,i,]/x[,5,]))/(m[,i,]/x[,5,])-exp(-m[,i,]/x[,5,]))+
       x[,4,]*((1-exp(-m[,i,]/x[,6,]))/(m[,i,]/x[,6,])-exp(-m[,i,]/x[,6,]))
     
@@ -53,17 +88,17 @@ GSS1<-function(x,m,r){
 }
 
 #Retrieving squared differences for all param combinations and sorting
-terms<-array(data$term,c(1,nrow(data),dim(h)[1]))
-yield<-array(data$ytm,c(1,nrow(data),dim(h)[1]))
-SSQRA<-GSS1(x=comb,m=terms, r=yield)
+terms <- array(data$term, c(1, nrow(data), dim(h)[1]))
+yield <- array(data$ytm, c(1, nrow(data), dim(h)[1]))
+SSQRA <- GSS1(x = comb, m = terms, r = yield)
 
 #finding out the combination with the lowest SSQ
 cmatrix<-list()
 for (i in 1:dim(comb)[1]){
   cmatrix[[i]]<-comb[i,,which.min(SSQRA[i,])]
-  }
-lowssq<-as.data.frame(matrix(do.call(rbind,cmatrix), nrow=nrow(SSQRA),
-               dimnames = list(c(), c('beta1','beta2','beta3','beta4','lambda1','lambda2'))))
+}
+lowssq <- as.data.frame(matrix(do.call(rbind,cmatrix), nrow=nrow(SSQRA),
+                               dimnames = list(c(), c('beta1','beta2','beta3','beta4','lambda1','lambda2'))))
 
 require(pastecs)
 stats <- lowssq %>% 
@@ -71,16 +106,16 @@ stats <- lowssq %>%
 stats[stats==0]<-0.000001
 
 #I rerun a grid search to get more precise initial values for optimization
-param_2<-mapply(c, param, as.list(stats), SIMPLIFY=F)
-param_2<-as.data.frame(cbind(t(stats),do.call(rbind,lapply(lapply(lapply(param_2,sort),diff),sort)))) %>% 
+param_2 <- mapply(c, param, as.list(stats), SIMPLIFY=F)
+param_2 <- as.data.frame(cbind(t(stats), do.call(rbind,lapply(lapply(lapply(param_2,sort),diff),sort)))) %>% 
   rename(central = "V1", lower= "V2", upper ="V3") %>% 
   select(c(lower, central, upper)) 
 
-stats_2<-cbind(param_2$central-apply(param_2[,c(1,3)],1,max),
-               param_2$central+apply(param_2[,c(1,3)],1,max))
+stats_2<-cbind(param_2$central - apply(param_2[,c(1,3)], 1, max),
+               param_2$central + apply(param_2[,c(1,3)], 1, max))
 
 #Creation of a narrower set of values
-spread<-apply(stats_2,1,diff)/(lengths(param)-1)
+spread <- apply(stats_2,1,diff)/(lengths(param)-1)
 
 new_set<-list()
 for (i in 1:nrow(stats_2)){
@@ -99,7 +134,7 @@ for (i in 1:dim(comb2)[1]){
   cmatrix_2[[i]]<-comb2[i,,which.min(SSQRB[i,])]
 }
 lowssq_2<-matrix(do.call(rbind,cmatrix_2), nrow=nrow(SSQRB), 
-                 dimnames = list(c(), )olnames(lowssq))
+                 dimnames = list(c(), colnames(lowssq)))
 
 stats_3 <- as.data.frame(lowssq_2) %>% 
   select(-c(beta1,beta2))
