@@ -293,8 +293,8 @@ bond_fut <- read_excel("inputs/OATA_fut_characteristics.xlsx", 1) %>%
   mutate(fut_contract = word(fut_contract,1)) %>%  filter(fut_contract%in%charac$fut_contract) %>% 
   mutate_at("ctd_matu", as.Date, format = "%d/%m/%Y") %>% left_join(charac) %>% 
   mutate(prev_cp_dt = as.Date(paste0(format(option_matu, "%Y"),"-",format(ctd_matu, "%m-%d")))) %>% 
-  mutate(prev_cp_dt = ifelse(as.numeric(option_matu - prev_cp_dt) > 365, 
-                             paste0(as.numeric(format(option_matu, "%Y")) + 1, "-", format(ctd_matu, "%m-%d")),
+  mutate(prev_cp_dt = ifelse(as.numeric(option_matu - prev_cp_dt) < 0, 
+                             paste0(as.numeric(format(option_matu, "%Y")) - 1, "-", format(ctd_matu, "%m-%d")),
                              prev_cp_dt)) %>% mutate_at("prev_cp_dt", as.Date) %>% 
   mutate(cc = as.numeric((option_matu - prev_cp_dt )/365)) %>% mutate(acc = ctd_cp*cc) %>%
   mutate(years = as.numeric(ctd_matu - option_matu)/365 ) %>% mutate(PX_liv = fut_price*conv_factor + acc)
@@ -317,12 +317,13 @@ cf <- split(rep(bond_fut$ctd_cp, years_c),
 
 #le YTM par obligation à partir de son prix, pour tous les prix possibles de chaque distribution
 require('tvm')
-tri<-list()
+
+tri <- list()
 for (i in 1:nrow(bond_fut)){
-  tri[[i]]<-list()
+  tri[[i]] <- list()
   for (j in 1:length(P[[i]])){
-    tri[[i]][[j]]<-xirr(cf = c(-P[[i]][[j]], cf[[i]], N[i]), tau = c(0, term[[i]][[1]]), comp_freq = 1, 
-                        interval = c(0, 10))}
+    tri[[i]][[j]] <- xirr(cf = c(-P[[i]][[j]], cf[[i]], N[i]), tau = c(0, term[[i]][[1]]), comp_freq = 1, 
+                          interval = c(0, 10))}
   tri[[i]]<-unlist(tri[[i]])}
 
 #############################  STATISTICS OF THE DISTRIBUTION #############################
@@ -371,8 +372,7 @@ mapply(lines, series_CDF, col = co)
 title(sub="UST future yield (%)",adj =1,line=2)
 legend("bottom", inset = c(-0.05,-0.35), legend = word(charac$matu,1), horiz = T,col=co, lty = 1, bty = "n")
 
-
-#mean, standard deviation, skewness and kurtosis for the distribution at each options' maturity
+#Standard deviation, skewness and kurtosis for the distribution at each options' maturity
 moments <- function(x){
   return(mapply(function(x, y, z, t, u) sum(rollmean(((t-y)^x)*z, 2)*diff(u)), x, E_y, DNR, tri, PX))}
 
@@ -380,13 +380,16 @@ SD_y <- sqrt(moments(2))
 SK_y <- moments(3)/SD_y^3
 KU_y <- moments(4)/SD_y^4
 
-#all statistics at once
-bond_fut <- bond_fut %>% mutate(fut_rate = 100*unlist(y_fut)) %>% 
-  bind_cols(t(sapply(range_px, function(x) x/c(0.008, 0.013))), nb_opt = unlist(nb_opt), 100*E_y, 100*SD_y, SK_y, KU_y) %>%
-  rename_at(c(14,15, 17:20), ~c("highest_strike", "lowest_strike", "mean", "stddev", "skewness", "kurtosis")) %>% 
-  mutate_at(~c("lowest_strike", "highest_strike"), ~ xirr(cf = c(-c(.), rep(ctd_cp, trunc(years)), 100 + ctd_cp), 
-                                                          tau = c(0, (0:years) + years - trunc(years)), 
-                                                          comp_freq = 1, interval = c(0, 10))) 
+#all statistics at a glance
+desc_stats <- bond_fut %>% bind_cols(t(sapply(range_px, function(x) x/c(0.008, 0.013)))) %>%
+  rename_at(14:15, ~c("highest_strike", "lowest_strike")) %>% 
+  mutate_at(vars(contains("strike")), ~ .*conv_factor + acc) %>% 
+  mutate(fut_rate = 100*unlist(y_fut)) %>% 
+  mutate_at(vars(contains("strike")), ~ 100*xirr(cf = c(-., rep(ctd_cp, trunc(years)), 100 + ctd_cp), 
+                                                 tau = c(0, (0:years) + years - trunc(years)), comp_freq = 1, interval = c(0, 10))) %>% 
+  select(c(fut_contract, option_matu, fut_rate, lowest_strike, highest_strike)) %>% 
+  bind_cols(100*E_y, 100*SD_y, SK_y, KU_y, nb_opt = unlist(nb_opt)) %>%
+  rename_at(6:9, ~c("mean", "stddev", "skewness", "kurtosis")) 
 
 #a few quantiles
 nb_q <- 1000
