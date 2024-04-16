@@ -101,8 +101,8 @@ for (m in 1:length(charac$terms)){
   P <- prices$put_price                                            #prices of puts for maturity m
   KC <- KP <- prices$call_strike                                   #strikes of options for maturity m
   FWD <- charac$fut_price[m]/100                                   #future price for maturity m
-  range_px[[m]] <- c(0.9, 1.05)*range(KC, na.rm = T)              #the range of strike for matu m
-  PX[[m]] <- seq(first(range_px[[m]]), last(range_px[[m]]), 1e-4)  #values of x to compute PDF and CDF
+  range_px[[m]] <- c(0.9, 1.05)*range(KC, na.rm = T)               #the range of strike for matu m
+  PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to compute PDF and CDF
   nb_opt[[m]] <- nrow(prices)                                      #number of options for matu m
   
   #1st optimization over 6 parameters to get initialization values for second optim
@@ -198,21 +198,23 @@ objective<-function(x){
 }
 
 mat<-c(charac$mat,nrow(options))
-params<-CV<-list()
 
-#optimization
+params <- CV <- PX <- range_px <- nb_opt <- list()
+
 for (m in 1:length(charac$terms)){
   
   #Elements of the option price function which are not random variables
-  T<-charac$terms[m]                              #maturity m
-  r<-rates_n[m]                                   #discount rate for maturity m
-  prices <- options %>%
-    select(-put_strike) %>% slice(mat[m]:mat[m+1]) %>% mutate_if(is.character, as.numeric) %>% 
-    na.omit %>% mutate_all(funs(./100))
-  C<-prices$call_price                            #prices of calls for maturity m
-  P<-prices$put_price                             #prices of puts for maturity m
-  KC<-KP<-prices$call_strike                      #strikes of puts and calls for maturity m
-  FWD<-charac$fut_price[m]/100                    #future price for maturity m
+  T <- charac$terms[m]                                             #maturity m
+  r <- rates_n[m]                                                  #discount rate for maturity m
+  prices <- options %>% select(-put_strike) %>% slice(mat[m]:mat[m+1]) %>% 
+    mutate_if(is.character, as.numeric) %>% na.omit %>% mutate_all(funs(./100))
+  C <- prices$call_price                                           #prices of calls for maturity m
+  P <- prices$put_price                                            #prices of puts for maturity m
+  KC <- KP <- prices$call_strike                                   #strikes of options for maturity m
+  FWD <- charac$fut_price[m]/100                                   #future price for maturity m
+  range_px[[m]] <- c(0.9, 1.05)*range(KC, na.rm = T)               #the range of strike for matu m
+  PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to compute PDF and CDF
+  nb_opt[[m]] <- nrow(prices)                                      #number of options for matu m
   
   #Thus 1st optimization over first 8 parameters to get initialization values for second optim
   PARA<-matrix(nrow=nrow(PR),ncol=12,dimnames=
@@ -249,7 +251,6 @@ for (m in 1:length(charac$terms)){
   #conversion of (a,b) into (mu, sigma)
   params[[m]]<-c(log(FWD)+(solu[1:3]-log(FWD))/T, solu[4:6]/sqrt(T), solu[7:8])
 }
-
 
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES       ########################################
 
