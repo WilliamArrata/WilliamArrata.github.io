@@ -1,24 +1,24 @@
 
-#####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ################
+#####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   #####################
 
 require("pacman")
 pacman::p_load("data.table","dplyr","ggplot2")
 
 #######################   VARYING THE CORRELATION COEFFICIENT BETWEEN TWO ASSETS    ###############################
 
-m <- c(3,7)*1e-2                                                      #Expected returns on assets A and B
-V <- c(1.44, 6.25)*1e-2                                               #Variance on assets A and B
-rho <- c(-1, 1, 0, 0.25)                                              #different values for the correlation
-cov <- apply(cbind(V[1],replicate(2,sqrt(prod(V))*rho),V[2]),1,list)  #all covariances matrix
+m <- c(3,7)*1e-2                                                         #Expected returns on assets A and B
+V <- c(1.44, 6.25)*1e-2                                                  #Variance on assets A and B
+rho <- c(-1, 1, 0, 0.25)                                                 #different values for the correlation
+cov <- apply(cbind(V[1],replicate(2,sqrt(prod(V))*rho),V[2]),1,list)     #all covariances matrix
 
 w <- seq(0, 1, length.out = 300)
-w <- cbind(w, rev(w))                                                 #a range of weights for both assets
+w <- cbind(w, rev(w))                                                    #a range of weights for both assets
 
-mean <- 100*w%*%m                                                     #portfolio expected returns
-pair<-list()                               
+mean <- 100*w%*%m                                                        #portfolio expected returns
+sd <- pair <- list()                               
 for (i in seq_along(rho)){
-  sd[[i]] <- 100*sqrt(diag(w%*%matrix(cov[[i]][[1]],nrow=2)%*%t(w)))  #portfolio standard deviations
-  pair[[i]]<-data.frame(stdev = sd[[i]], mean = mean)}                
+  sd[[i]] <- 100*sqrt(diag(w%*%matrix(cov[[i]][[1]], nrow = 2)%*%t(w)))  #portfolio standard deviations
+  pair[[i]] <- data.frame(stdev = sd[[i]], mean = mean)}                
 
 #Graph of the 300 portfolios in the mean standard deviation space
 xlim <- 1.1*range(sd)
@@ -37,11 +37,10 @@ legend("bottom", horiz=T, inset = c(0,-0.4), text.col = colv, pch = rep(NA,4), l
 
 #######################################   COMBINING ASSET BY PAIRS   ##################################
 
-
 mu <- list(c(0.03,0.05), c(0.05,0.065), c(0.065,0.075),             #expected returns on pairs of assets
            c(0.075,0.11), c(0.11,0.15), c(0.03,0.15))
 sig <- list(c(0.05,0.08,0.03), c(0.08,0.11,-0.03), c(0.11,0.12,0.06), #covariances between pairs of assets
-            c(0.12,0.16,0.07), c(0.16,0.21,0.12), c(0.05,0.21,-0.08))
+          c(0.12,0.16,0.07), c(0.16,0.21,0.12), c(0.05,0.21,-0.08))
 
 #assets coordinates
 assets <- 100*data.frame(stdev = unique(sqrt(unlist(lapply(sig, function(x) head(x,2))))), 
@@ -85,5 +84,5 @@ ggplot(data =  assets, aes(x = stdev, y = mean)) +
   #   values = rep("black",6),
   #   labels = paste0(expression(rho),"_",LETTERS[seq_along(mu)],",",shift(LETTERS[seq_along(mu)], places = -1)," : ",
   #                   round(correl,2)), drop = F) +
-  labs(x = "standard deviation (%)", y = "expected return (%)", fill=NULL) +
+    labs(x = "standard deviation (%)", y = "expected return (%)", fill=NULL) +
   theme(legend.position = "bottom", plot.margin = margin(1.2,.5,1.2,.5, "cm"))
