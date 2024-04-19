@@ -8,9 +8,10 @@ pacman::p_load("tseries","readxl","dplyr", "tidyr", "data.table", "ggplot2")
 
 #I load the data
 returns <- as.matrix(read_excel("stock_prices.xlsx") %>%  select_if(is.numeric) %>%  mutate_all(~ ( (.) - shift(.))/(.)) %>% 
-  na.omit() %>% rename_with(~gsub(" Equity","", (.)) ))
+                       na.omit() %>% rename_with(~gsub(" Equity","", (.)) ))
 mean <- 252*matrix(colMeans(returns))                             #annualized expected returns
 sig <- 252*cov(returns)                                           #annualized covariances
+
 
 ###########################   OPTIMAL PORTFOLIOS FOR SOME TARGET EXPECTED RETURNS   #########################
 
@@ -183,23 +184,23 @@ legend("bottom", horiz = T, inset = c(0,-0.35), legend = c("Minimum variance fro
 ggplot(ptfs, aes(vol,return)) +  geom_point(aes(color = "Minimum Variance Frontier")) +
   geom_line(data = effi, aes(color = "Efficient frontier"), size = 1) +
   geom_point(data = ptfs[c(low,high),], aes(vol, return), size = 2) +
-  annotate("text", x = ptfs$vol[low], y = ptfs$return[low], hjust = -0.1, vjust=0.2, label = 
-             bquote(mu[0]== .(round(ptfs$return[low]*100, 1)) ~ "% ;"~ sigma[0] == .(round(ptfs$vol[low]*100, 1))~"%")) +
-  annotate("text", x = ptfs$vol[high], y = ptfs$return[high], hjust = -0.1, vjust=0.2, label = 
-             bquote(mu[1]== .(round(ptfs$return[high]*100, 1)) ~ "% ;"~ sigma[1] == .(round(ptfs$vol[high]*100, 1))~"%")) +
-  labs(x="standard deviation", y="expected return") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) +
-  scale_y_continuous(labels = scales::percent) +  scale_x_continuous(labels = scales::percent)
+  annotate("text", x = ptfs$vol[c(low,high)], y = ptfs$return[c(low,high)], hjust = -0.1, vjust = 0.2, label = 
+             as.expression(sapply(split(ptfs[c(low,high),], ptfs[c(low,high),]$vol), function(x)
+               bquote(mu == .(round(x[[3]]*100, 1)) ~ "% ; "~ sigma == .(round(x[[2]]*100, 1)) ~ "%")))) +
+  scale_y_continuous(labels = scales::percent) +  scale_x_continuous(labels = scales::percent) +
+  labs(x="standard deviation", y="expected return") + 
+  theme(legend.position = "bottom", legend.title=element_blank(), plot.margin = margin(.8,.5,.8,.5, "cm"))
 
+#another try with geom_segment
 ggplot() +
   geom_segment(data = ptfs, aes(x = vol, xend = dplyr::lead(vol), y = return, yend = dplyr::lead(return)), 
                size = 2.5, color="lightblue") +
   geom_segment(data = effi, aes(x = vol, xend = dplyr::lead(vol), y = return, yend = dplyr::lead(return)), 
                size = 1, color="indianred") +
   geom_point(data = ptfs[c(low,high),], aes(vol, return), color="black", size = 3) +
-  annotate("text", x = ptfs$vol[low], y = ptfs$return[low], hjust = -0.1, vjust=0.2, label = 
-             bquote(mu[0]== .(round(ptfs$return[low]*100, 1)) ~ "% ;"~ sigma[0] == .(round(ptfs$vol[low]*100, 1))~"%")) +
-  annotate("text", x = ptfs$vol[high], y = ptfs$return[high], hjust = -0.1, vjust=0.2, label = 
-             bquote(mu[1]== .(round(ptfs$return[high]*100, 1)) ~ "% ;"~ sigma[1] == .(round(ptfs$vol[high]*100, 1))~"%")) +
+  annotate("text", x = ptfs$vol[c(low,high)], y = ptfs$return[c(low,high)], hjust = -0.1, vjust = 0.2, label = 
+             as.expression(sapply(split(ptfs[c(low,high),], ptfs[c(low,high),]$vol), function(x)
+               bquote(mu == .(round(x[[3]]*100, 1)) ~ "% ; "~ sigma == .(round(x[[2]]*100, 1)) ~ "%")))) +
   labs(x="standard deviation", y="expected return") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) +
   scale_y_continuous(labels = scales::percent) +  scale_x_continuous(labels = scales::percent)
 
@@ -226,12 +227,12 @@ legend("bottom",horiz=T,inset = c(0,-0.35),legend=c("Minimum variance frontier",
 ggplot(ptfs_no_s, aes(vol,return)) +  geom_point(aes(color = "Minimum Variance Frontier")) +
   geom_line(data = effi_no_s, aes(color = "Efficient frontier"), size = 1) +
   geom_point(data = ptfs_no_s[c(low_no_s,high_no_s),], aes(vol, return), size = 2) +
-  annotate("text", x = ptfs_no_s$vol[low_no_s], y = ptfs_no_s$return[low_no_s], hjust = -0.1, vjust=0.2, label = 
-             bquote(mu[0]== .(round(ptfs_no_s$return[low_no_s]*100, 1)) ~ "% ;"~ sigma[0] == .(round(ptfs_no_s$vol[low_no_s]*100, 1))~"%")) +
-  annotate("text", x = ptfs_no_s$vol[high_no_s], y = ptfs_no_s$return[high_no_s], hjust = -0.1, vjust=0.2, label = 
-             bquote(mu[1]== .(round(ptfs_no_s$return[high_no_s]*100, 1)) ~ "% ;"~ sigma[1] == .(round(ptfs_no_s$vol[high_no_s]*100, 1))~"%")) +
-  labs(x = "standard deviation", y = "expected return") + theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) +
-  scale_y_continuous(labels = scales::percent) +  scale_x_continuous(labels = scales::percent)
+  annotate("text", x = ptfs_no_s$vol[c(low_no_s,high_no_s)], y = ptfs_no_s$return[c(low_no_s,high_no_s)], hjust = -0.1, vjust = 0.2, label = 
+             as.expression(sapply(split(ptfs_no_s[c(low_no_s,high_no_s), ], ptfs_no_s$vol[c(low_no_s,high_no_s)]), 
+                                  function(x) bquote(mu == .(round(x[[3]]*100, 1)) ~ "% ; "~ sigma == .(round(x[[2]]*100, 1)) ~ "%")))) +
+  labs(x = "standard deviation", y = "expected return") + scale_y_continuous(labels = scales::percent) +  
+  scale_x_continuous(labels = scales::percent) + 
+  theme(legend.position = "bottom", legend.title=element_blank(), plot.margin = margin(.8,.5,.8,.5, "cm")) 
 
 #Weights for each target return
 cum_w<-apply(ptfs_no_s[,grep("w",colnames(ptfs_no_s))],1,cumsum)
