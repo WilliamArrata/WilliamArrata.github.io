@@ -8,7 +8,7 @@ pacman::p_load("tseries","readxl")
 
 #I load the data
 return <- as.matrix(read_excel("stock_prices.xlsx") %>%  select_if(is.numeric) %>%  mutate_all(~ ( (.) - shift(.))/(.)) %>% 
-                      na.omit() %>% rename_with(~gsub(" Equity","", (.)) ))      #daily historical returns
+                       na.omit() %>% rename_with(~gsub(" Equity","", (.)) ))      #daily historical returns
 mean<-252*matrix(colMeans(return))                                                #annualized expected returns
 sig<-252*cov(return)                                                              #annualized covariances
 
@@ -105,8 +105,7 @@ aveweight<-as.matrix(Reduce("+", resampw)/n_samp)
 aveweight<-aveweight/replicate(ncol(aveweight),rowSums(aveweight))
 
 #I apply average weights to initial parameters to get robust efficient frontier
-resamp<-as.data.frame(cbind(diag(sqrt(aveweight%*%sig%*%t(aveweight))),aveweight%*%mean))
-colnames(resamp)<-c("vol","return")
+resamp <- data.frame(vol = diag(sqrt(aveweight%*%sig%*%t(aveweight))), return = aveweight%*%mean)
 
 #graph of the resampled efficient frontiers
 col<-c("darkblue","indianred")
