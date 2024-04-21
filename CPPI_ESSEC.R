@@ -1,15 +1,10 @@
-##############################  WILLIAM ARRATA - CPPI - ESSEC WINTER 2023  ####################################
-
 require("pacman")
 pacman::p_load("readxl","data.table","dplyr","tidyr")
 
-##########################################  DATA AND PARAMETERS  ########################################
+##############################  WILLIAM ARRATA - CPPI - ESSEC WINTER 2023  ####################################
 
-cppi <- as.data.frame(read_excel("SXXE.xlsx")) %>%                     #Loading risky asset price history
-  rename(Date = "Start Date", price = "43100") %>%                     #Naming columns
-  mutate(Date = as.Date(as.numeric(Date), origin='1899-12-30')) %>%    #conversion into dates
-  mutate(price = as.numeric(price)) %>%                                #conversion into numeric
-  drop_na()                                                            #remove lines with at least one NA
+cppi <- read_excel("SXXE.xlsx") %>% rename_with(~c("Date", "price")) %>%   #Loading risky asset price history
+  mutate_all(as.numeric) %>% mutate_at("Date", as.Date, origin='1899-12-30') %>% drop_na()
 
 #I define the parameters
 F <- 90                                                                #Floor
@@ -27,8 +22,8 @@ F2 <- 1.1
 backt <- as.data.frame(matrix(nrow=nrow(cppi),ncol=9,
                            dimnames=list(c(),c("Date","n","Px","Vrisky","Vrf","Vpf","brebal","Cushion","Floor"))))
 backt$Date <- cppi$Date                                                          #Dates
-backt$Px <- cppi$price                                                           #Risky asset values
-backt$Floor <- F*c(1,cumprod(1+as.numeric(r[-last(r)]*diff(backt$Date)/365)))    #Compounded Floor
+backt$Px <- cppi$price                                                           #Risky asset
+backt$Floor <- F*c(1,cumprod(1+as.numeric(r[-last(r)]*diff(backt$Date)/365)))    #Floor
 backt$Vpf[1] <- 100                                                              #CPPI value at inception
 backt$Cushion[1] <- (backt$Vpf-backt$Floor)[1]                                   #Cushion value at inception
 backt$Vrisky[1] <- m*backt$Cushion[1]                                            #Risky assets value at inception
@@ -74,6 +69,8 @@ t <- 0:500
 sig <- sqrt(252)*sd(diff(cppi$price)/cppi$price[-last(cppi$price)])     #historical volatility used for simu
 nsim <- 1000
 set.seed(123)
+
+test <- tail(cppi$price, -1)
 
 #Brownian Motion simulation
 dW <- matrix(rnorm(n=nsim*(length(t)-1), sd=sig), nrow=nsim, ncol=(length(t)-1))    #mean=0 thus no need to specify
