@@ -70,8 +70,6 @@ sig <- sqrt(252)*sd(diff(cppi$price)/cppi$price[-last(cppi$price)])     #histori
 nsim <- 1000
 set.seed(123)
 
-test <- tail(cppi$price, -1)
-
 #Brownian Motion simulation
 dW <- matrix(rnorm(n=nsim*(length(t)-1), sd=sig), nrow=nsim, ncol=(length(t)-1))    #mean=0 thus no need to specify
 W <- cbind(0, t(apply(dW, 1, cumsum)))                                              #integration and inception at 0
