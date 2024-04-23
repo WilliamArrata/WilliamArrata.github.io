@@ -65,14 +65,16 @@ ggplot(curve, aes(stdev, mean)) +
   labs(x = "standard deviation (%)", y = "expected return (%)") + theme(plot.margin = margin(1.2,.5,1.2,.5, "cm"))
 
 #Adding in the graph the curve between most distant assets
+asset_pair <- paste0(LETTERS[seq_along(mu)], LETTERS[c(tail(seq_along(mu), -1), 1)])
+lab <- paste0(expression(rho~ plain("_") ),"~",  asset_pair, expression(~ plain("=") ), "~", round(assets$correl/100,2))
+
 ggplot() + geom_point(data = assets, aes(x = stdev, y = mean, fill = as.factor(correl)), size = 3) +
   annotate(geom = "text", x = assets$stdev,  y = assets$mean, label = LETTERS[seq_along(mu)], 
            fontface = 2, hjust = -0.6, vjust = 1.2) +
   geom_segment(data = curve, aes(x = stdev, xend = dplyr::lead(stdev), y = mean, yend = dplyr::lead(mean)),
                size = 1, color="indianred") +
-  geom_segment(data = curve_2, aes(x = stdev, xend = dplyr::lead(stdev), y = mean, yend = dplyr::lead(mean)),size = 1) +
-  scale_fill_manual(
-    values = rep("black", 6), labels = parse(text = sprintf("rho == %s", round(assets$correl/100,2), drop = F))) +
+  geom_segment(data = curve_2, aes(x = stdev, xend = dplyr::lead(stdev), y = mean, yend = dplyr::lead(mean)), size = 1) +
+  scale_fill_manual(values = rep("black", 6), labels = parse(text = sprintf(lab))) +
   labs(x = "standard deviation (%)", y = "expected return (%)", fill=NULL) +
   xlim(c(0.9,1.1)*range(curve_2$stdev)) + ylim(c(0.9,1.1)*range(curve_2$mean)) +
   theme(legend.position = "bottom", plot.margin = margin(1.2,.5,1.2,.5, "cm"))
