@@ -1,15 +1,15 @@
-###################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL - WINTER 2023  ########################
+
+################################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL  ################################
 
 require("pacman")
 pacman::p_load("nloptr","readxl","dplyr","tidyr")
 
-################################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL  ################################
-
 #Influence of the different parameters on the shape of the curve:
 
 #the matrix of coefficients
-coeff <- as.data.frame(matrix(t(replicate(4, c(0.02, 0.003, 0.4, "", "", 0.6))), nrow=4, dimnames = 
-                                list(c(),c("beta_1", "beta_2", "beta_3", "beta_4", "lambda_1", "lambda_2"))))
+coeff <- as.data.frame(matrix(c(0.02, 0.003, 0.4, "", "", 0.6), nrow = 4, ncol = 6, byrow = T, dimnames =
+                                list( c(), c("beta_1", "beta_2", "beta_3", "beta_4", "lambda_1", "lambda_2"))))
+
 #varying the values of beta_3 and lambda_1
 coeff_2 <- coeff_3 <- coeff
 
@@ -26,9 +26,9 @@ matu<-(1:120)/12
 NSS_test <- function(x, coeff){
   curve<-matrix(nrow=nrow(coeff), ncol=length(matu))
   for (i in 1: nrow(coeff)){
-    curve[i, ] <- coeff$beta_1[i] + coeff$beta_2[i]*(1-exp(-x/coeff$lambda_1[i]))/(x/coeff$lambda_1[i]) +
-      coeff$beta_3[i]*((1-exp(-x/coeff$lambda_1[i]))/(x/coeff$lambda_1[i])-exp(-x/coeff$lambda_1[i])) +
-      coeff$beta_4[i]*((1-exp(-x/coeff$lambda_2[i]))/(x/coeff$lambda_2[i])-exp(-x/coeff$lambda_2[i]))}
+  curve[i, ] <- coeff$beta_1[i] + coeff$beta_2[i]*(1-exp(-x/coeff$lambda_1[i]))/(x/coeff$lambda_1[i]) +
+    coeff$beta_3[i]*((1-exp(-x/coeff$lambda_1[i]))/(x/coeff$lambda_1[i])-exp(-x/coeff$lambda_1[i])) +
+    coeff$beta_4[i]*((1-exp(-x/coeff$lambda_2[i]))/(x/coeff$lambda_2[i])-exp(-x/coeff$lambda_2[i]))}
   return(curve)
 }
 
@@ -58,8 +58,8 @@ bb <- seq(from = 0.3, to = 2.4, by = 0.70)
 param <- list(a,aa,b,bb)
 h <- expand.grid(param)
 
-comb <- array(dim=c(1, 6, dim(h)[1]))                   #All possible param combinations
-comb[,1,] <- data$ytm[nrow(data)]                     #First param is the longest term bond rate (trailing maturity)
+comb <- array(dim=c(1, 6, dim(h)[1]))                  #All possible param combinations
+comb[,1,] <- data$ytm[nrow(data)]                      #First param is the longest term bond rate (trailing maturity)
 comb[,2,] <- diff(data$ytm[c(nrow(data), 1)])          #Second param = ST - LT bond rate
 comb[,3:dim(comb)[2],] <- t(h)
 
@@ -93,72 +93,62 @@ yield <- array(data$ytm, c(1, nrow(data), dim(h)[1]))
 SSQRA <- GSS1(x = comb, m = terms, r = yield)
 
 #finding out the combination with the lowest SSQ
-cmatrix<-list()
+cmatrix <- list()
 for (i in 1:dim(comb)[1]){
-  cmatrix[[i]]<-comb[i,,which.min(SSQRA[i,])]
-}
-lowssq <- as.data.frame(matrix(do.call(rbind,cmatrix), nrow=nrow(SSQRA),
-                               dimnames = list(c(), c('beta1','beta2','beta3','beta4','lambda1','lambda2'))))
+  cmatrix[[i]] <- comb[i,,which.min(SSQRA[i,])]
+  }
+lowssq <- as.data.frame(matrix(unlist(cmatrix), nrow = nrow(SSQRA),
+               dimnames = list(c(), c('beta1','beta2','beta3','beta4','lambda1','lambda2'))))
 
 require(pastecs)
-stats <- lowssq %>% 
-  select(-c(beta1,beta2))
-stats[stats==0]<-0.000001
+stats <- lowssq %>% select(-c(beta1,beta2)) %>% mutate(across(, ~ifelse(.==0, 1e-6, .))) %>% as.list
 
 #I rerun a grid search to get more precise initial values for optimization
-param_2 <- mapply(c, param, as.list(stats), SIMPLIFY=F)
-param_2 <- as.data.frame(cbind(t(stats), do.call(rbind,lapply(lapply(lapply(param_2,sort),diff),sort)))) %>% 
-  rename(central = "V1", lower= "V2", upper ="V3") %>% 
-  select(c(lower, central, upper)) 
+param_2 <- mapply(c, param, stats)
+param_2 <- data.frame(unlist(stats), do.call(rbind, lapply(param_2, function(x) head(sort(diff(sort(x))),2)))) %>% 
+  rename_all(~c("central", "lower", "upper"))
 
-stats_2<-cbind(param_2$central - apply(param_2[,c(1,3)], 1, max),
-               param_2$central + apply(param_2[,c(1,3)], 1, max))
+stats_2 <- param_2 %>% rowwise() %>% mutate(max = max(across(2:3)))
+stats_2 <- param_2$central + cbind(- stats_2$max,  stats_2$max)
 
 #Creation of a narrower set of values
 spread <- apply(stats_2,1,diff)/(lengths(param)-1)
 
-new_set<-list()
-for (i in 1:nrow(stats_2)){
-  new_set[[i]]<-seq(stats_2[i,1],stats_2[i,2], by=spread[i])
-}
-hh<-expand.grid(new_set)
+new_set <- mapply("*", apply(stats_2/spread, 1, function(x) Reduce(seq, x)), as.list(spread))
 
-comb2<-comb                                   #First 2 parameters do not change
-comb2[,3:dim(comb2)[2],]<-t(hh)               #Next 4 param are given by the combination matrix
+hh <- expand.grid(new_set)
 
-SSQRB<-GSS1(x=comb2,m=terms, r=yield)
+comb2 <- comb                                      #First 2 parameters do not change
+comb2[ , 3:dim(comb2)[2], ] <- t(hh)               #Next 4 param are given by the combination matrix
+
+SSQRB <- GSS1(x = comb2, m = terms, r = yield)
 print(mean(SSQRB)/mean(SSQRA)<1)              #Check that new parameters helped minimize SSQ
 
-cmatrix_2<-list()
+cmatrix_2 <- list()
 for (i in 1:dim(comb2)[1]){
-  cmatrix_2[[i]]<-comb2[i,,which.min(SSQRB[i,])]
+  cmatrix_2[[i]] <- comb2[i,,which.min(SSQRB[i,])]
 }
-lowssq_2<-matrix(do.call(rbind,cmatrix_2), nrow=nrow(SSQRB), 
-                 dimnames = list(c(), colnames(lowssq)))
 
-stats_3 <- as.data.frame(lowssq_2) %>% 
-  select(-c(beta1,beta2))
-stats_3[stats_3==0]<-0.000001
+lowssq_2 <- matrix(unlist(cmatrix_2), nrow=nrow(SSQRB), dimnames = list(c(), colnames(lowssq)))
 
-param_3<-mapply(c, new_set, as.list(stats_3), SIMPLIFY=F)
-param_3<-as.data.frame(cbind(t(stats_3),do.call(rbind,lapply(lapply(lapply(param_3,sort),diff),sort)))) %>% 
-  select(c(V1,V2,V3)) %>% 
-  rename(central = "V1", lower= "V2", upper ="V3")
+stats_3 <- data.frame(lowssq_2) %>% select(-c(beta1,beta2)) %>% mutate(across(, ~ifelse(.==0, 1e-6, .))) %>% as.list
 
-stats_4<-as.data.frame(cbind(param_3$central-apply(param_3[,2:3],1,max),
-                             param_3$central,
-                             param_3$central+apply(param_3[,2:3],1,max)))
-colnames(stats_4)<-c("lower","start","upper")
+param_3 <- mapply(c, new_set, stats_3)
+param_3 <- data.frame(unlist(stats_3), do.call(rbind,lapply(param_3, function(x) head(sort(diff(sort(x))), 2)))) %>% 
+  rename_all(~c("central", "lower", "upper"))
 
-lower<-c(0.9*lowssq_2[,1:2],stats_4$lower)
-upper<-c(1.1*lowssq_2[,1:2],stats_4$upper)
-replace<-lower>upper
-reorder_1<-lower[replace]
-reorder_2<-upper[replace]
-lower[replace]<-reorder_2
-upper[replace]<-reorder_1
-CI<-c(lower,-upper)
-UI<-rbind(diag(6),-diag(6))
+stats_4 <- param_3 %>% rowwise() %>% mutate(max = max(across(2:3)))
+stats_4 <- param_3$central + data.frame(lower = -stats_4$max, start = 0, upper = stats_4$max)
+
+lower <- c(0.9*lowssq_2[,1:2], stats_4$lower)
+upper <- c(1.1*lowssq_2[,1:2], stats_4$upper)
+replace <- lower>upper
+reorder_1 <- lower[replace]
+reorder_2 <- upper[replace]
+lower[replace] <- reorder_2
+upper[replace] <- reorder_1
+CI <- c(lower,-upper)
+UI <- rbind(diag(6),-diag(6))
 
 #Objective function to be optimized.
 GSS<-function(x,m,r){
@@ -177,22 +167,22 @@ GSS(x=lowssq_2[1,], m=data$term, r=data[,ncol(data)])
 objective(x=lowssq_2[1,])
 
 #Calibration of the 6 parameters
-sol<-CV<-error<-list()
+sol <- CV <- error <- list()
 for (i in 1:(ncol(data)-1)){
-  sol[[i]]<-constrOptim(lowssq_2[i,], objective, NULL, ui=UI, ci=CI, mu=1e-05, 
+  sol[[i]] <- constrOptim(lowssq_2[i,], objective, NULL, ui=UI, ci=CI, mu=1e-05, 
                         control=list(iter.max=2000), method="Nelder-Mead")$par
-  CV[[i]]<-constrOptim(lowssq_2[i,], objective, NULL, ui=UI, ci=CI, mu=1e-05, 
+  CV[[i]] <- constrOptim(lowssq_2[i,], objective, NULL, ui=UI, ci=CI, mu=1e-05, 
                        control=list(iter.max=2000), method="Nelder-Mead")$convergence
-  error[[i]]<-objective(x=sol[[i]])
+  error[[i]] <- objective(x=sol[[i]])
 }
 
-sol<-as.data.frame(do.call(rbind,sol))
+sol <- as.data.frame(do.call(rbind,sol))
 
-e1<-sum(unlist(error))
+e1 <- sum(unlist(error))
 
 #theoretical spot rate curve for any term:
-NSS<-function(x){
-  curve<-matrix(nrow=nrow(sol), ncol=length(x))
+NSS <- function(x){
+  curve <- matrix(nrow=nrow(sol), ncol=length(x))
   for (i in 1:nrow(curve)){ 
     curve[i,] <- sol$beta1[i] + sol$beta2[i]*(1-exp(-x/sol$lambda1[i]))/(x/sol$lambda1[i]) +
       sol$beta3[i]*((1-exp(-x/sol$lambda1[i]))/(x/sol$lambda1[i])-exp(-x/sol$lambda1[i])) +
