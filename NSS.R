@@ -1,44 +1,45 @@
-
-################################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL  ################################
-
 require("pacman")
 pacman::p_load("nloptr","readxl","dplyr","tidyr")
+
+################################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL  ################################
 
 #Influence of the different parameters on the shape of the curve:
 
 #the matrix of coefficients
-coeff <- as.data.frame(matrix(c(0.02, 0.003, 0.4, "", "", 0.6), nrow = 4, ncol = 6, byrow = T, dimnames =
-                                list( c(), c("beta_1", "beta_2", "beta_3", "beta_4", "lambda_1", "lambda_2"))))
-
-#varying the values of beta_3 and lambda_1
+coeff <- data.frame(matrix(c(0.02, -0.02, "", 0.06, "", 13), nrow = 4, ncol = 6, byrow = T, dimnames =
+                  list( c(), c("beta_1", "beta_2", "beta_3", "beta_4", "lambda_1", "lambda_2"))))
 coeff_2 <- coeff_3 <- coeff
 
-coeff_2$beta_4 <- c(0.00002, 0.05,0.2, 0.4)
-coeff_2$lambda_1 <- 100
+#varying the values of beta_3
+coeff_2$beta_3 <- c(-8, -2, 2, 10)/100
+coeff_2$lambda_1 <- 1
 coeff_2 <- data.frame(apply(coeff_2, 2, as.numeric))
 
-coeff_3$beta_4 <- 0.02
-coeff_3$lambda_1 <- c(40, 60, 80, 100)
+#varying the values of lambda_1
+coeff_3$beta_3 <- 0.01
+coeff_3$lambda_1 <- c(0.2,1,4,16)
 coeff_3 <- data.frame(apply(coeff_3, 2, as.numeric))
 
-matu<-(1:120)/12
+matu <- (1:120)/12
 
-NSS_test <- function(x, coeff){
-  curve<-matrix(nrow=nrow(coeff), ncol=length(matu))
-  for (i in 1: nrow(coeff)){
-  curve[i, ] <- coeff$beta_1[i] + coeff$beta_2[i]*(1-exp(-x/coeff$lambda_1[i]))/(x/coeff$lambda_1[i]) +
-    coeff$beta_3[i]*((1-exp(-x/coeff$lambda_1[i]))/(x/coeff$lambda_1[i])-exp(-x/coeff$lambda_1[i])) +
-    coeff$beta_4[i]*((1-exp(-x/coeff$lambda_2[i]))/(x/coeff$lambda_2[i])-exp(-x/coeff$lambda_2[i]))}
+sub <- function(x, y) {y[,1]*((1-exp(-x/y[,2]))/(x/y[,2])-exp(-x/y[,2]))}
+
+NSS_test <- function(x, y){
+  curve <- y[,1] + y[,2]*(1-exp(-x/y[,5]))/(x/y[,5]) + sub(x, y[,c(3,5)])+ sub(x, y[,c(4,6)])
   return(curve)
 }
 
-plot(matu, 100*NSS_test(matu, coeff_2)[1, ], type="l", ylim = 110*range(NSS_test(matu, coeff_2)), xlab="term", ylab="ytm (%)")
-apply(100*NSS_test(matu, coeff_2), 1, function(x, t) lines(matu, x), t=t)
-text(x = matu[24], y = 120*NSS_test(matu, coeff_2)[,24], label = parse(text = sprintf("beta[4] == %s", coeff_2$beta_4)))
+val <- lapply(split(coeff_2, coeff_2$beta_3), function(x) 100*NSS_test(matu, x))
 
-plot(matu, 100*NSS_test(matu, coeff_3)[1, ], type="l", ylim = 110*range(NSS_test(matu, coeff_3)), xlab="term", ylab="ytm (%)")
-apply(100*NSS_test(matu, coeff_3), 1, function(x, t) lines(matu, x), t=t)
-text(x = matu[100], y = 100*NSS_test(matu, coeff_2)[,100], label = parse(text = sprintf("lambda[1] == %s", coeff_3$lambda_1)))
+plot(NA, type="l", xlim = range(matu), ylim = range(val), xlab="term (years)", ylab="ytm (%)")
+lapply(val, function(x, t) lines(matu, x), t=t)
+text(x = matu[12], y = lapply(val, function(x) x[[12]]), label = parse(text = sprintf("beta[3]==%s", coeff_2$beta_3)))
+
+val_2 <- lapply(split(coeff_3, coeff_3$lambda_1), function(x) 100*NSS_test(matu, x))
+
+plot(NA, type="l", xlim = range(matu), ylim = range(val_2), xlab="term (years)", ylab="ytm (%)")
+lapply(val_2, function(x, t) lines(matu, x), t=t)
+text(x = matu[20], y = lapply(val_2, function(x) x[[20]]), label = parse(text = sprintf("lambda[1]==%s", coeff_3$lambda_1)))
 
 ################################         CALIBRATION OF PARAMETERS           ################################
 
@@ -151,48 +152,49 @@ CI <- c(lower,-upper)
 UI <- rbind(diag(6),-diag(6))
 
 #Objective function to be optimized.
-GSS<-function(x,m,r){
-  NSS <- x[1] + x[2]*(1-exp(-m/x[5]))/(m/x[5]) + x[3]*((1-exp(-m/x[5]))/(m/x[5])-exp(-m/x[5])) + 
-    x[4]*((1-exp(-m/x[6]))/(m/x[6])-exp(-m/x[6]))
+sub_3 <- function(x, m){x[1]*((1-exp(-m/x[2]))/(m/x[2])-exp(-m/x[2]))}
+
+GSS <- function(x,m,r){
+  NSS <- x[1] + x[2]*(1-exp(-m/x[5]))/(m/x[5]) + sub_3(x[c(3,5)], m)+ sub_3(x[c(4,6)], m)
   SSQ<-sum((r-NSS)^2,na.rm=T)
   return(SSQ)
 }
 
-objective<-function(x){
-  return(GSS(x,m=data$term,r=as.matrix(data[,i+1])))
+objective <- function(x){
+  return(GSS(x, m = data$term, r = as.matrix(data[,i+1])))
 }
 
 #What it the SSQ between observed rates and theoretical rates calculated with initial conditions of param?
-GSS(x=lowssq_2[1,], m=data$term, r=data[,ncol(data)])
+GSS(x = lowssq_2[1,], m = data$term, r = data[,ncol(data)])
 objective(x=lowssq_2[1,])
 
 #Calibration of the 6 parameters
-sol <- CV <- error <- list()
+param <- CV <- error <- list()
 for (i in 1:(ncol(data)-1)){
-  sol[[i]] <- constrOptim(lowssq_2[i,], objective, NULL, ui=UI, ci=CI, mu=1e-05, 
-                        control=list(iter.max=2000), method="Nelder-Mead")$par
-  CV[[i]] <- constrOptim(lowssq_2[i,], objective, NULL, ui=UI, ci=CI, mu=1e-05, 
-                       control=list(iter.max=2000), method="Nelder-Mead")$convergence
-  error[[i]] <- objective(x=sol[[i]])
+  sol <- constrOptim(lowssq_2[i,], objective, NULL, ui = UI, ci = CI, mu = 1e-05, 
+                     control = list(iter.max = 2000), method = "Nelder-Mead")
+  param[[i]] <- sol$par
+  CV[[i]] <- sol$convergence
+  error[[i]] <- objective(x =  param[[i]])
 }
 
-sol <- as.data.frame(do.call(rbind,sol))
+param <- data.frame(do.call(rbind, param))
 
 e1 <- sum(unlist(error))
 
 #theoretical spot rate curve for any term:
 NSS <- function(x){
-  curve <- matrix(nrow=nrow(sol), ncol=length(x))
+  curve <- matrix(nrow=nrow(param), ncol=length(x))
   for (i in 1:nrow(curve)){ 
-    curve[i,] <- sol$beta1[i] + sol$beta2[i]*(1-exp(-x/sol$lambda1[i]))/(x/sol$lambda1[i]) +
-      sol$beta3[i]*((1-exp(-x/sol$lambda1[i]))/(x/sol$lambda1[i])-exp(-x/sol$lambda1[i])) +
-      sol$beta4[i]*((1-exp(-x/sol$lambda2[i]))/(x/sol$lambda2[i])-exp(-x/sol$lambda2[i]))
+    curve[i,] <- param$beta1[i] + param$beta2[i]*(1-exp(-x/param$lambda1[i]))/(x/param$lambda1[i]) +
+      param$beta3[i]*((1-exp(-x/param$lambda1[i]))/(x/param$lambda1[i])-exp(-x/param$lambda1[i])) +
+      param$beta4[i]*((1-exp(-x/param$lambda2[i]))/(x/param$lambda2[i])-exp(-x/param$lambda2[i]))
   }
   return(curve)
 }
 
 #theoretical spot rate from first to last maturity, with monthly timestep
-matu<-1:round(12*max(data$term))
+matu <- 1:round(12*max(data$term))
 
 col<- c("indianred", "darkblue")
 cex<-0.8
