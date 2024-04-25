@@ -2,7 +2,7 @@
 #####################   WILLIAM ARRATA - ESSEC PORTFOLIO MANAGEMENT COURSE WINTER 2023   ################
 
 require("pacman")
-pacman::p_load("tseries","readxl")
+pacman::p_load("tseries","readxl","dplyr", "tidyr", "data.table", "ggplot2")
 
 #####################   DATA DOWNLOAD AND COMPUTATION OF EXPECTED RETURNS AND COVARIANCES   ################
 
@@ -40,7 +40,7 @@ nports<-300   #nb of ptf, thus we have 300 target expected returns
 shorts<-F
 wmax<-1
 
-ptfs_no_s <- EF(returns = as.matrix(returns), nports = nports, shorts = shorts, wmax = wmax)
+ptfs_no_s <- EF(returns = returns, nports = nports, shorts = shorts, wmax = wmax)
 low_no_s <- which.min(ptfs_no_s$vol)
 high_no_s <- which.max(ptfs_no_s$return)
 effi_no_s <- ptfs_no_s[low_no_s:high_no_s,]
