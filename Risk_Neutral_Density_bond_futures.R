@@ -12,7 +12,7 @@ options <- read_excel("inputs/OATA_options_31_mai_2023.xlsx",1) %>% row_to_names
 charac <- options %>% mutate(mat = row_number()) %>% filter(call_price=="matu") %>% 
   mutate(option_matu = word(call_strike, 1, 3), fut_price = as.numeric( word(call_strike, -1))) %>% 
   mutate(terms = as.numeric(gsub('[^0-9.-]','', word(option_matu, 2)))/365, fut_contract = word(call_strike,-2)) %>%
-  select(-colnames(options)) %>% mutate_at("option_matu", ~as.Date(sub(").*","",word(.,-1)), format = "%m/%d/%y"))
+  select(-colnames(options)) %>% mutate_at("option_matu", ~as.Date(gsub("\\).*","",word(.,-1)), format = "%m/%d/%y"))
 
 #graph option prices for the most remote maturity
 last_mat <- options %>% mutate_if(is.character, as.numeric) %>% slice((last(charac$mat)+1):nrow(options))
@@ -35,40 +35,37 @@ rates <- read_excel("inputs/EUR_rates.xlsx") %>% mutate_if(is.character, as.nume
 rates_n <- approxExtrap(rates$term, rates$Yield, xout=charac$terms, method = "linear", n = 50, rule = 2, f = 0, 
                         ties = "ordered", na.rm = F)$y/100
 
+
 ###############################  CALIBRATION OF PARAMETERS  ##########################################
 
-#European call & put prices, expected spot price as a function of a and b for a sum of 2 lognormals in B&S model
-
-CALLE <- function(x, KC){
+call <- function(x, KC){                          #call price in the B&S model
   d1_C <- (x[1] + x[2]^2 - log(KC))/x[2]
   d2_C <- d1_C - x[2]
-  CALL <- exp(-r*T)*(exp(x[1] + (x[2]^2/2))*pnorm(d1_C) - KC*pnorm(d2_C))
-}
+  call <- exp(-r*T)*(exp(x[1] + (x[2]^2/2))*pnorm(d1_C) - KC*pnorm(d2_C))}
 
-ESP <- function(x){exp(x[1]+(x[2]^2/2))}          #expected value for a lognormal distribution
+esp <- function(x){exp(x[1]+(x[2]^2/2))}          #expected value for a lognormal distribution
 
-CALLE_2_log <- function(x, KC){ x[5]*CALLE(x[c(1,3)], KC) + (1-x[5])*CALLE(x[c(2,4)], KC)}
-
-PUTE_2_log <- function(x, KP){ CALLE_2_log(x,KP) + exp(-r*T)*(KP - FWD)}     #put call parity
-
-ESP_2_log <- function(x){ x[5]*ESP(x[c(1,3)]) + (1-x[5])*ESP(x[c(2,4)])}
+#European call & put prices, expected spot price as a function of a and b for a sum of 2 lognormals in B&S model
+call_2_log <- function(x, KC){ x[5]*call(x[c(1,3)], KC) + (1-x[5])*call(x[c(2,4)], KC)}
+put_2_log <- function(x, KP){ call_2_log(x,KP) + exp(-r*T)*(KP - FWD)}                    #put call parity
+esp_2_log <- function(x){ x[5]*esp(x[c(1,3)]) + (1-x[5])*esp(x[c(2,4)])}
 
 #Function to minimize over 7 parameters
 
 MSE_2_log <- function(x){
-  C_INF <- pmax(ESP_2_log(x) - KC,CALLE_2_log(x,KC))
-  C_SUP <- exp(r*T)*CALLE_2_log(x,KC)
-  P_INF <- pmax(KP - ESP_2_log(x), PUTE_2_log(x,KP))
-  P_SUP <- exp(r*T)*PUTE_2_log(x,KP)
-  A <- as.numeric(KC<=ESP_2_log(x))
-  B <- as.numeric(KP>=ESP_2_log(x))
+  C_INF <- pmax(esp_2_log(x) - KC,call_2_log(x,KC))
+  C_SUP <- exp(r*T)*call_2_log(x,KC)
+  P_INF <- pmax(KP - esp_2_log(x), put_2_log(x,KP))
+  P_SUP <- exp(r*T)*put_2_log(x,KP)
+  A <- as.numeric(KC<=esp_2_log(x))
+  B <- as.numeric(KP>=esp_2_log(x))
   w_call <- A*x[6] + (1-A)*x[7]
   w_put <- B*x[6] + (1-B)*x[7]
   CALL <- w_call*C_INF + (1 - w_call)*C_SUP
   PUT <- w_put*P_INF + (1 - w_put)*P_SUP
   RES_C <- sum((C - CALL)^2, na.rm=T)
   RES_P <- sum((P - PUT)^2, na.rm=T)
-  RES_F <- (FWD - ESP_2_log(x))^2
+  RES_F <- (FWD - esp_2_log(x))^2
   MSE_2_log <- RES_C + RES_P + RES_F
   return(MSE_2_log)
 }
@@ -94,7 +91,7 @@ for (m in 1:length(charac$terms)){
   KC <- KP <- prices$call_strike                                   #strikes of options for maturity m
   FWD <- charac$fut_price[m]/100                                   #future price for maturity m
   range_px[[m]] <- c(0.8, 1.3)*range(KC, na.rm = T)               #the range of strike for matu m
-  PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to compute PDF and CDF
+  PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to comput PDF and CDF
   nb_opt[[m]] <- nrow(prices)                                      #number of options for matu m
   
   #1st optimization over 6 parameters to get initialization values for second optim
@@ -136,29 +133,27 @@ for (m in 1:length(charac$terms)){
 
 #European call & put prices, expected spot price as a function of a and b for a sum of 3 lognormals in B&S model
 
-CALLE_3_log <- function(x, KC){
-  x[7]*CALLE(x[c(1,4)], KC) + x[8]*CALLE(x[c(2,5)], KC) + (1-sum(x[7:8]))*CALLE(x[c(3,6)], KC)}
-
-PUTE_3_log <- function(x,KP){ CALLE_3_log(x,KP) + exp(-r*T)*(KP-FWD)}
-
-ESP_3_log <- function(x){ x[7]*ESP(x[c(1,4)]) + x[8]*ESP(x[c(2,5)]) + (1-sum(x[7:8]))*ESP(x[c(3,6)])}
+call_3_log <- function(x, KC){
+  x[7]*call(x[c(1,4)], KC) + x[8]*call(x[c(2,5)], KC) + (1-sum(x[7:8]))*call(x[c(3,6)], KC)}
+put_3_log <- function(x,KP){ call_3_log(x,KP) + exp(-r*T)*(KP-FWD)}
+esp_3_log <- function(x){ x[7]*esp(x[c(1,4)]) + x[8]*esp(x[c(2,5)]) + (1-sum(x[7:8]))*esp(x[c(3,6)])}
 
 #function to minimize over 10 parameters
 
 MSE_3_log <- function(x){
-  C_INF <- pmax(ESP_3_log(x) - KC,CALLE_3_log(x,KC))
-  C_SUP <- exp(r*T)*CALLE_3_log(x,KC)
-  P_INF <- pmax(KP - ESP_3_log(x),PUTE_3_log(x,KP))
-  P_SUP <- exp(r*T)*PUTE_3_log(x,KP)
-  A <- as.numeric(KC<=ESP_3_log(x))
-  B <- as.numeric(KP>=ESP_3_log(x))
+  C_INF <- pmax(esp_3_log(x) - KC,call_3_log(x,KC))
+  C_SUP <- exp(r*T)*call_3_log(x,KC)
+  P_INF <- pmax(KP - esp_3_log(x),put_3_log(x,KP))
+  P_SUP <- exp(r*T)*put_3_log(x,KP)
+  A <- as.numeric(KC<=esp_3_log(x))
+  B <- as.numeric(KP>=esp_3_log(x))
   w_call <- A*x[9] + (1-A)*x[10]
   w_put <- B*x[9] + (1-B)*x[10]
   CALL <- w_call*C_INF + (1-w_call)*C_SUP
   PUT <- w_put*P_INF + (1-w_put)*P_SUP
   RES_C <- sum((C-CALL)^2, na.rm=T)
   RES_P <- sum((P-PUT)^2, na.rm=T)
-  RES_F <- (FWD-ESP_3_log(x))^2
+  RES_F <- (FWD-esp_3_log(x))^2
   MSE_3_log <- RES_C + RES_P + RES_F
   return(MSE_3_log)
 }
@@ -186,7 +181,7 @@ for (m in 1:length(charac$terms)){
   KC <- KP <- prices$call_strike                                   #strikes of options for maturity m
   FWD <- charac$fut_price[m]/100                                   #future price for maturity m
   range_px[[m]] <- c(0.8, 1.3)*range(KC, na.rm = T)               #the range of strike for matu m
-  PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to compute PDF and CDF
+  PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to comput PDF and CDF
   nb_opt[[m]] <- nrow(prices)                                      #number of options for matu m
   
   #Thus 1st optimization over first 8 parameters to get initialization values for second optim
@@ -268,8 +263,8 @@ bond_fut <- read_excel("inputs/OATA_fut_characteristics.xlsx", 1) %>%
   mutate_at("ctd_matu", as.Date, format = "%d/%m/%Y") %>% left_join(charac) %>% 
   mutate(prev_cp_dt = as.Date(paste0(format(option_matu, "%Y"),"-",format(ctd_matu, "%m-%d")))) %>% 
   mutate(prev_cp_dt = ifelse(as.numeric(option_matu - prev_cp_dt) < 0, 
-                            paste0(as.numeric(format(option_matu, "%Y")) - 1, "-", format(ctd_matu, "%m-%d")),
-                            prev_cp_dt)) %>% mutate_at("prev_cp_dt", as.Date) %>% 
+                             as.Date(paste0(as.numeric(format(option_matu, "%Y")) - 1, "-", format(ctd_matu, "%m-%d"))),
+                             prev_cp_dt)) %>% mutate_at("prev_cp_dt", as.Date) %>% 
   mutate(cc = as.numeric((option_matu - prev_cp_dt )/365)) %>% mutate(acc = ctd_cp*cc) %>%
   mutate(years = as.numeric(ctd_matu - option_matu)/365 ) %>% mutate(PX_liv = fut_price*conv_factor + acc)
 
@@ -344,7 +339,7 @@ plot(NA, pch = 20, xlab = "", ylab = "cumulative probability", xlim = xlim, ylim
      main=paste("RNDs from a mixture of",nb_log,"lognormals"))
 mapply(lines, series_CDF, col = co)
 title(sub="UST future yield (%)",adj =1,line=2)
-legend("bottom", inset = c(-0.05,-0.35), legend = word(charac$matu,1), horiz = T,col=co, lty = 1, bty = "n")
+legend("bottom", inset = c(-0.05,-0.35), legend = charac$option_matu, horiz = T,col=co, lty = 1, bty = "n")
 
 #Standard deviation, skewness and kurtosis for the distribution at each options' maturity
 moments <- function(x){
