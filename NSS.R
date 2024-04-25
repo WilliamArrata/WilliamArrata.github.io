@@ -7,7 +7,7 @@ pacman::p_load("nloptr","readxl","dplyr","tidyr")
 
 #the matrix of coefficients
 coeff <- data.frame(matrix(c(0.02, -0.02, "", 0.06, "", 13), nrow = 4, ncol = 6, byrow = T, dimnames =
-                  list( c(), c("beta_1", "beta_2", "beta_3", "beta_4", "lambda_1", "lambda_2"))))
+                             list( c(), c("beta_1", "beta_2", "beta_3", "beta_4", "lambda_1", "lambda_2"))))
 coeff_2 <- coeff_3 <- coeff
 
 #varying the values of beta_3
@@ -59,44 +59,37 @@ bb <- seq(from = 0.3, to = 2.4, by = 0.70)
 param <- list(a,aa,b,bb)
 h <- expand.grid(param)
 
-comb <- array(dim=c(1, 6, dim(h)[1]))                  #All possible param combinations
-comb[,1,] <- data$ytm[nrow(data)]                      #First param is the longest term bond rate (trailing maturity)
-comb[,2,] <- diff(data$ytm[c(nrow(data), 1)])          #Second param = ST - LT bond rate
-comb[,3:dim(comb)[2],] <- t(h)
+comb <- array(dim=c(6, 1, dim(h)[1]))                  #All possible param combinations
+comb[1,,] <- data$ytm[nrow(data)]                      #First param is the longest term bond rate (trailing maturity)
+comb[2,,] <- diff(data$ytm[c(nrow(data), 1)])          #Second param = ST - LT bond rate
+comb[3:dim(comb)[1],,] <- t(h)                         #Last four parameters to be determined by grid search
 
 #Computing the sum of squares  - grid search
 GSS1 <- function(x, m, r){
-  NSS1 <- SQ1 <- array(dim = c(1, nrow(data), dim(h)[1]))
-  SSQ1 <- matrix(nrow = dim(SQ1)[1], ncol = dim(SQ1)[3])
+  NSS1 <- SQ1 <- array(dim = c(nrow(data), 1, dim(h)[1]))
+  SSQ1 <- matrix(nrow = dim(SQ1)[2], ncol = dim(SQ1)[3])
   
-  #expression pour chaque terme du taux théorique
-  for (i in 1:dim(NSS1)[2]){
-    NSS1[,i,] <- x[,1,] + x[,2,]*(1-exp(-m[,i,]/x[,5,]))/(m[,i,]/x[,5,])+
-      x[,3,]*((1-exp(-m[,i,]/x[,5,]))/(m[,i,]/x[,5,])-exp(-m[,i,]/x[,5,]))+
-      x[,4,]*((1-exp(-m[,i,]/x[,6,]))/(m[,i,]/x[,6,])-exp(-m[,i,]/x[,6,]))
-    
-    #expression pour chaque terme de l'écart au carré entre chaque taux de marché et chaque taux théorique
-    for (j in 1:dim(SQ1)[1]){
-      SQ1[j,i,]<-(r[j,i,]-NSS1[j,i,])^2
-      
-      #somme des écarts sur tous les termes
-      for (k in 1:dim(SSQ1)[2]){
-        SSQ1[j,k]<-sum(SQ1[j,,k],na.rm=T)
-      }
+  for (i in 1:dim(NSS1)[1]){                  #theoretical rate by maturity
+    NSS1[i,,] <- x[1,,] + x[2,,]*(1-exp(-m[i,,]/x[5,,]))/(m[i,,]/x[5,,])+
+      x[3,,]*((1-exp(-m[i,,]/x[5,,]))/(m[i,,]/x[5,,])-exp(-m[i,,]/x[5,,]))+
+      x[4,,]*((1-exp(-m[i,,]/x[6,,]))/(m[i,,]/x[6,,])-exp(-m[i,,]/x[6,,]))
+    for (j in 1:dim(SQ1)[2]){
+      SQ1[i,j,]<-(r[i,j,]-NSS1[i,j,])^2       #squared diff between theoretical and market rate by maturity
     }
+    SSQ1 <- colSums(SQ1, dims = 1, na.rm=T)   #sum of squared diff across maturities
   }
   return(SSQ1)
 }
 
 #Retrieving squared differences for all param combinations and sorting
-terms <- array(data$term, c(1, nrow(data), dim(h)[1]))
-yield <- array(data$ytm, c(1, nrow(data), dim(h)[1]))
+terms <- array(data$term, c(nrow(data), 1, dim(h)[1]))
+yield <- array(data$ytm, c(nrow(data), 1, dim(h)[1]))
 SSQRA <- GSS1(x = comb, m = terms, r = yield)
 
 #finding out the combination with the lowest SSQ
 cmatrix <- list()
-for (i in 1:dim(comb)[1]){
-  cmatrix[[i]] <- comb[i,,which.min(SSQRA[i,])]
+for (i in 1:dim(comb)[2]){
+  cmatrix[[i]] <- comb[,i,which.min(SSQRA[i,])]
   }
 lowssq <- as.data.frame(matrix(unlist(cmatrix), nrow = nrow(SSQRA),
                dimnames = list(c(), c('beta1','beta2','beta3','beta4','lambda1','lambda2'))))
@@ -120,14 +113,14 @@ new_set <- mapply("*", apply(stats_2/spread, 1, function(x) Reduce(seq, x)), as.
 hh <- expand.grid(new_set)
 
 comb2 <- comb                                      #First 2 parameters do not change
-comb2[ , 3:dim(comb2)[2], ] <- t(hh)               #Next 4 param are given by the combination matrix
+comb2[3:dim(comb2)[1], , ] <- t(hh)               #Next 4 param are given by the combination matrix
 
 SSQRB <- GSS1(x = comb2, m = terms, r = yield)
 print(mean(SSQRB)/mean(SSQRA)<1)              #Check that new parameters helped minimize SSQ
 
 cmatrix_2 <- list()
-for (i in 1:dim(comb2)[1]){
-  cmatrix_2[[i]] <- comb2[i,,which.min(SSQRB[i,])]
+for (i in 1:dim(comb2)[2]){
+  cmatrix_2[[i]] <- comb2[,i,which.min(SSQRB[i,])]
 }
 
 lowssq_2 <- matrix(unlist(cmatrix_2), nrow=nrow(SSQRB), dimnames = list(c(), colnames(lowssq)))
