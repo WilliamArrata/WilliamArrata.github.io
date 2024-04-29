@@ -223,17 +223,14 @@ for (m in 1:length(charac$terms)){
 
 ###############################  GRAPH OF RISK NEUTRAL DENSITIES       ########################################
 
-all_p <- mapply(c, params, PX)                   #grouping parameters and price interval by density
+sub <- function(x, y){ x[3]*dlnorm(y, meanlog = x[1], sdlog = x[2]) }
 
-#Probability Density Function for any maturity for a sum of 2 or 3 lognormals
-PDF<-function(x){
-  ifelse(unique(lengths(params))!=5,
-         return(x[7]*dlnorm(x[-c(1:5)],meanlog=x[1], sdlog=x[4]) + x[8]*dlnorm(x[-c(1:5)],meanlog=x[2], sdlog=x[5]) + 
-                  (1-sum(x[7:8]))*dlnorm(x[-c(1:5)],meanlog=x[3], sdlog=x[6])),
-         return(x[5]*dlnorm(x[-c(1:5)],meanlog=x[1], sdlog=x[3]) + (1-x[5])*dlnorm(x[-c(1:5)],meanlog=x[2], sdlog=x[4])))}
+PDF <- function(x, y){
+  ifelse(unique(lengths(params))==5,
+         return(sub(x[c(1, 3, 5)], y) + sub(c(x[c(2, 4)], 1-x[5]), y) ),
+         return(sub(x[c(1, 4, 7)], y) + sub(x[c(2, 5, 8)], y) + sub( c(x[c(3, 6)], 1-sum(x[7:8])), y))) }
 
-DNR <- sapply(all_p, PDF)
-
+DNR <- mapply(PDF, params, PX)
 mapply(function(x,y) sum(rollmean(x, 2)*diff(y)), DNR, PX)   #check that integral of PDF*dPX is worth 1
 
 #Graph of risk neutral densities for Euribor futures prices
@@ -293,15 +290,15 @@ ggplot() +
   ylim(0, 6) +  labs(x = 'options maturity ', y = 'Euribor 3 month values') +
   theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) 
 
-#Cumulative Density Function for any maturity for a sum of 2 or 3 lognormals
-CDF<-function(x){
-  ifelse(unique(lengths(params))!=5,
-         return(x[7]*plnorm(x[-c(1:5)],meanlog=x[1], sdlog=x[4]) + x[8]*plnorm(x[-c(1:5)],meanlog=x[2], sdlog=x[5]) + 
-                  (1-sum(x[7:8]))*plnorm(x[-c(1:5)],meanlog=x[3], sdlog=x[6])),
-         return(x[5]*plnorm(x[-c(1:5)],meanlog=x[1], sdlog=x[3]) + (1-x[5])*plnorm(x[-c(1:5)],meanlog=x[2], sdlog=x[4])))}
+sub_2 <- function(x, y){ x[3]*plnorm(y, meanlog = x[1], sdlog = x[2]) }
+
+CDF <- function(x, y){
+  ifelse(unique(lengths(params))==5,
+         return(sub_2(x[c(1, 3, 5)], y) + sub_2(c(x[c(2, 4)], 1-x[5]), y) ),
+         return(sub_2(x[c(1, 4, 7)], y) + sub_2(x[c(2, 5, 8)], y) + sub_2( c(x[c(3, 6)], 1-sum(x[7:8])), y)) ) }
 
 #Graph of cumulative density functions for rates
-NCDF <- sapply(all_p, CDF)
+NCDF <- mapply(CDF, params, PX)
 series_CDF <- mapply(cbind, yields, NCDF)
 
 par(mar=c(8,6,4,4) + 0.1, xpd=T, cex.axis=cex)
