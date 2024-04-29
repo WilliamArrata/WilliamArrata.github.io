@@ -151,7 +151,6 @@ objective( x = cmatrix_2[,i])
 CI <- c(lower, -upper)
 UI <- rbind(diag(6), -diag(6))
 
-#changer l'expression de la valeur initiale
 para <- CV <- error <- list()
 for (i in 1:(ncol(data)-1)){
   sol <- constrOptim(cmatrix_2[,i], objective, NULL, ui = UI, ci = CI, mu = 1e-05, 
