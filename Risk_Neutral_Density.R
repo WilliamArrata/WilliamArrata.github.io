@@ -317,10 +317,9 @@ SD_y <- sqrt(moments(2))
 SK_y <- moments(3)/SD_y^3
 KU_y <- moments(4)/SD_y^4
 
-charac <- charac %>% select(-c(mat, fut_contract)) %>% mutate(fut_rate = 100 - fut_price) %>% 
-  bind_cols(do.call(rbind, range_px)/c(0.0095, 0.0105), nb_opt = unlist(nb_opt), 100*E_y, 100*SD_y, SK_y, KU_y) %>% 
-  rename_at(c(5,6,8:11), ~c("highest_strike", "lowest_strike", "mean", "stddev", "skewness", "kurtosis")) %>% 
-  mutate(lowest_strike = 100 - lowest_strike, highest_strike = 100 - highest_strike)
+charac <- charac %>% select(-c(mat, fut_contract)) %>% mutate(fut_rate = 100 - fut_price) %>%
+  bind_cols((1-t(sapply(range_px, rev))/c(1.05, 0.95))*100, nb_opt = unlist(nb_opt), 100*E_y, 100*SD_y, SK_y, KU_y) %>%
+  rename_at(c(5,6,8:11), ~c("lowest_strike", "highest_strike", "mean", "stddev", "skewness", "kurtosis"))
 
 #a few quantiles
 nb_q <- 100
