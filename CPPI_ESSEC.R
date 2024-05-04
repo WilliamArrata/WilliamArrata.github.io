@@ -42,24 +42,24 @@ for (i in 2:nrow(backt)){
   if(backt$Cushion[i]>backt$Floor[i]/(m-1)){
       backt$Vrisky[i] <- backt$brebal[i]     
       backt$n[i] <- backt$n[i-1]
-      backt$Vrf[i] <- (backt$Vrf*(1+r*diff(backt$Date)/365))[i-1]
-      backt$Vpf[i] <- (backt$Vrisky+backt$Vrf)[i]
+      backt$Vrf[i] <- (backt$Vrf*(1 + r*diff(backt$Date)/365))[i-1]
+      backt$Vpf[i] <- (backt$Vrisky + backt$Vrf)[i]
   }
   #2. Otherwise when cushion is positive
   else if(backt$Cushion[i]>0){
       backt$Vrisky[i] <- m*backt$Cushion[i]
       backt$n[i] <- (backt$Vrisky/backt$Px)[i]
-      backt$Vrf[i] <- (backt$Vrf*(1+r*diff(backt$Date)/365))[i-1]+(backt$brebal-backt$Vrisky)[i]
-      backt$Vpf[i] <- (backt$Vrisky+backt$Vrf)[i]
+      backt$Vrf[i] <- (backt$Vrf*(1 + r*diff(backt$Date)/365))[i-1] + (backt$brebal - backt$Vrisky)[i]
+      backt$Vpf[i] <- (backt$Vrisky + backt$Vrf)[i]
   }
   #3. When cushion becomes negative, conversion of risky asset into riskfree asset
   else {
-    backt$Vrf[i] <- backt$Vpf[i] <- (backt$Vrf*(1+r*diff(backt$Date)/365))[i-1]+backt$Px[i]*backt$n[i-1]
+    backt$Vrf[i] <- backt$Vpf[i] <- (backt$Vrf*(1 + r*diff(backt$Date)/365))[i-1] + backt$Px[i]*backt$n[i-1]
     backt$n[i] <- 0
   }
 }
 
-plot(backt$Date, backt$Vpf, type = "l", ylim = range(backt$Vpf),xlab = "time", ylab = "CPPI value")   #graph
+plot(backt$Date, backt$Vpf, type = "l", ylim = range(backt$Vpf), xlab = "time", ylab = "CPPI value")   #graph
 
 ###################################  SIMULATIONS OF RISKY ASSET VALUES  #######################################
 
@@ -71,68 +71,65 @@ nsim <- 1000
 set.seed(123)
 
 #Brownian Motion simulation
-dW <- matrix(rnorm(n=nsim*(length(t)-1), sd=sig), nrow=nsim, ncol=(length(t)-1))    #mean=0 thus no need to specify
-W <- cbind(0, t(apply(dW, 1, cumsum)))                                              #integration and inception at 0
-plot(t, W[1,], type = "l", ylim = round(range(W)), xlab="time", ylab="brownian motion",)    #graph
-apply(W[2:nsim, ], 1, function(x, t) lines(t, x), t=t)
+dW <- split(rnorm(n = nsim*(length(t) - 1), sd = sig), 1:nsim)                    #mean=0 thus no need to specify
+W <- lapply(dW, function(x) c(0, cumsum(x)))                                      #integration and inception at 0
+plot(NA, type = "l", xlim = range(t), ylim = range(W), xlab="time", ylab="brownian motion") #graph
+lapply(W, lines)
 
 #asset price simulation
-S <- 100*exp(t(replicate(nsim,(R-0.5*sig^2)*t)) + sig*W)
-plot(t, S[1,], type = "l", ylim = range(S),xlab = "time", ylab = "asset value")   #graph
-apply(S[2:nsim, ], 1, function(x, t) lines(t, x), t = t)
-
+S <- lapply(W, function(x) 100*exp( (R - 0.5*sig^2)*t + sig*x ) )
+plot(NA, type = "l", xlim = range(t), ylim = range(S), xlab="time", ylab="asset value") #graph
+lapply(S, lines)
 
 #######################################  SIMULATIONS OF CPPI VALUES  ##########################################
 
 simu_tot <- list()
 
-for (j in 1:nrow(S)){
+for (j in 1:length(S)){
 
 #Initialization
-  simu <- as.data.frame(matrix(nrow=ncol(S),ncol=9,dimnames=
-                   list(c(),c("Date","n","Px","Vrisky","Vrf","Vpf","brebal","Cushion","Floor"))))
+  simu <- as.data.frame(matrix(nrow = length(S[[j]]), ncol = 9, dimnames =
+                   list( c(), c("Date","n","Px","Vrisky","Vrf","Vpf","brebal","Cushion","Floor"))))
   simu$Date <- t                                                          #Dates
-  simu$Floor <- F*c(1,cumprod(1+as.numeric(R*diff(simu$Date)/365)))       #Floor
+  simu$Floor <- F*c(1, cumprod(1 + as.numeric(R*diff(simu$Date)/365)))       #Floor
   simu$Vrisky[1] <- 40                                                    #Risky assets nominal value  at inception
   simu$Vrf[1] <- 60                                                       #Riskfree asset nominal value at inception
-  simu$Vpf[1] <- (simu$Vrisky+simu$Vrf)[1]                                #Portfolio value at inception
-  simu$Cushion[1] <- (simu$Vpf-simu$Floor)[1]                             #Cushion value at inception
-  simu$Px <- S[j,]                                                        #Risky asset
+  simu$Vpf[1] <- (simu$Vrisky + simu$Vrf)[1]                                #Portfolio value at inception
+  simu$Cushion[1] <- (simu$Vpf - simu$Floor)[1]                             #Cushion value at inception
+  simu$Px <- S[[j]]                                                        #Risky asset
   simu$n[1] <- (simu$Vrisky/simu$Px)[1]                                   #Nb shares of risky asset at inception
   
   #Iteration
   for (i in 2:nrow(simu)){
     #values before rebalancing
-    simu$brebal[i] <- simu$Px[i]*simu$n[i-1]                                                  #of risky asset
-    simu$Cushion[i] <- (simu$Vrf*(1+R*diff(simu$Date)/365))[i-1]+(simu$brebal-simu$Floor)[i]  #of cushion
+    simu$brebal[i] <- simu$Px[i]*simu$n[i-1]                                                        #of risky asset
+    simu$Cushion[i] <- (simu$Vrf*(1 + R*diff(simu$Date)/365))[i-1] + (simu$brebal - simu$Floor)[i]  #of cushion
   
   #rebalancing actions
   #1. If risky asset value above portfolio value, do nothing, riskfree asset interest accrues only
     if(simu$Cushion[i]>simu$Floor[i]/(m-1)){
       simu$Vrisky[i] <- simu$brebal[i]     
       simu$n[i] <- simu$n[i-1]
-      simu$Vrf[i] <- (simu$Vrf*(1+R*diff(simu$Date)/365))[i-1]
-      simu$Vpf[i] <- (simu$Vrisky+simu$Vrf)[i]
+      simu$Vrf[i] <- (simu$Vrf*(1 + R*diff(simu$Date)/365))[i-1]
+      simu$Vpf[i] <- (simu$Vrisky + simu$Vrf)[i]
       }
   
   #2. Otherwise when cushion is positive
     else if(simu$Cushion[i]>0){
       simu$Vrisky[i] <- m*simu$Cushion[i]
       simu$n[i] <- (simu$Vrisky/simu$Px)[i]
-      simu$Vrf[i] <- (simu$Vrf*(1+R*diff(simu$Date)/365))[i-1]+(simu$brebal-simu$Vrisky)[i]
-      simu$Vpf[i] <- (simu$Vrisky+simu$Vrf)[i]
+      simu$Vrf[i] <- (simu$Vrf*(1 + R*diff(simu$Date)/365))[i-1] + (simu$brebal - simu$Vrisky)[i]
+      simu$Vpf[i] <- (simu$Vrisky + simu$Vrf)[i]
       }
   
   #3. When cushion becomes negative, conversion of risky asset into riskfree asset
     else {
-      simu$Vrf[i] <- simu$Vpf[i] <- (simu$Vrf*(1+R*diff(simu$Date)/365))[i-1]+simu$Px[i]*simu$n[i-1]
+      simu$Vrf[i] <- simu$Vpf[i] <- (simu$Vrf*(1 + R*diff(simu$Date)/365))[i-1] + simu$Px[i]*simu$n[i-1]
       simu$n[i] <- 0
     }
     }
   simu_tot[[j]] <- simu$Vpf
 }
-simu_tot <- do.call(rbind,simu_tot)
 
-#graph
-plot(t, simu_tot[1,], type="l", ylim = round(range(simu_tot)), xlab="time", ylab="CPPI value",)
-apply(simu_tot[2:nrow(simu_tot), ], 1, function(x, t) lines(t, x), t=t)
+plot(NA, type="l", xlim = range(t), ylim = round(range(simu_tot)), xlab="time", ylab="CPPI value",)  #graph
+lapply(simu_tot, lines)
