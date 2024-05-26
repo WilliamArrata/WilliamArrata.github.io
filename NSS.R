@@ -16,8 +16,8 @@ coeff_2$lambda_1 <- 1
 coeff_2 <- data.frame(apply(coeff_2, 2, as.numeric))
 
 #varying the values of lambda_1
-coeff_3$beta_3 <- 0.01
-coeff_3$lambda_1 <- c(0.2,1,4,16)
+coeff_3$beta_3 <- 0.1
+coeff_3$lambda_1 <- c(0.2,0.5,1,2)
 coeff_3 <- data.frame(apply(coeff_3, 2, as.numeric))
 
 matu <- (1:120)/12
@@ -29,17 +29,22 @@ NSS_test <- function(x, y){
   return(curve)
 }
 
-val <- lapply(split(coeff_2, coeff_2$beta_3), function(x) 100*NSS_test(matu, x))
+col <- rainbow(4)
 
-plot(NA, type="l", xlim = range(matu), ylim = range(val), xlab="term (years)", ylab="ytm (%)")
-lapply(val, function(x, t) lines(matu, x), t=t)
-text(x = matu[12], y = lapply(val, function(x) x[[12]]), label = parse(text = sprintf("beta[3]==%s", coeff_2$beta_3)))
+yield <- lapply(split(coeff_2, coeff_2$beta_3), function(x) 100*NSS_test(matu, x))
 
-val_2 <- lapply(split(coeff_3, coeff_3$lambda_1), function(x) 100*NSS_test(matu, x))
+plot(NA, type="l", xlim = range(matu), ylim = range(yield), xlab="term (years)", ylab="ytm (%)")
+lapply(yield, function(x, t) lines(matu, x), t=t)
+text(x = matu[30], y = lapply(yield, function(x) x[[30]]), pos = 1, col = col, cex = 1.5, 
+     label = parse(text = sprintf("beta[3]==%s", coeff_2$beta_3)))
 
-plot(NA, type="l", xlim = range(matu), ylim = range(val_2), xlab="term (years)", ylab="ytm (%)")
-lapply(val_2, function(x, t) lines(matu, x), t=t)
-text(x = matu[20], y = lapply(val_2, function(x) x[[20]]), label = parse(text = sprintf("lambda[1]==%s", coeff_3$lambda_1)))
+yield_2 <- lapply(split(coeff_3, coeff_3$lambda_1), function(x) 100*NSS_test(matu, x))
+
+plot(NA, type="l", xlim = range(matu), ylim = range(yield_2), xlab="term (years)", ylab="ytm (%)")
+lapply(yield_2, function(x, t) lines(matu, x), t=t)
+text(x = matu[60], y = lapply(yield_2, function(x) x[[60]]), col = col, cex = 1.5, pos = 1, 
+     label = parse(text = sprintf("lambda[1]==%s", coeff_3$lambda_1)))
+
 
 ################################         CALIBRATION OF PARAMETERS           ################################
 
@@ -49,20 +54,6 @@ data <- read_excel("French_bonds_06_10_2023.xlsx",1) %>% filter(!Series%in%c("OA
   mutate(term = (as.Date(term, format= "%d/%m/%Y") - as.Date("2023-10-06"))/365) %>% 
   mutate(term = as.numeric(term), ytm = ytm/100) %>% filter(term<=10)
 
-###################################   First grid search for the 6 parameters of the NSS function    ########################
-
-#beta3, beta 4, lambda 1 and lambda 2 have to be found out so we first create a grid of parameters
-a <- seq(from =0, to = 0.16, by = 0.04)
-aa <- seq(from =-0.1, to = 0, by = 0.02)
-b <- seq(from = 3.3, to = 6.3, by = 1)
-bb <- seq(from = 0.3, to = 2.4, by = 0.70)
-param <- list(a, aa, b, bb)
-h <- expand.grid(param)
-
-comb <- array(dim=c(6, 1, dim(h)[1]))                  #All possible param combinations
-comb[1,,] <- data$ytm[nrow(data)]                      #First param is the longest term bond rate (trailing maturity)
-comb[2,,] <- diff(data$ytm[c(nrow(data), 1)])          #Second param = ST - LT bond rate
-comb[3:dim(comb)[1],,] <- t(h)                         #Last four parameters to be determined by grid search
 
 #A function to compute the sum of squares between theoretical and market rates for different combinations of param
 GSS1 <- function(x, m, r){
@@ -81,20 +72,41 @@ GSS1 <- function(x, m, r){
   return(SSQ1)
 }
 
+###################################   First grid search for the 6 parameters of the NSS function    ########################
+
+#beta3, beta 4, lambda 1 and lambda 2 have to be found out so we first create a grid of parameters
+a <- seq(from =0, to = 0.16, by =0.04)
+aa <- seq(from =-0.1, to = 0, by =0.02)
+b <- seq(from = 3.3, to = 6.3, by =1)
+bb <- seq(from = 0.3, to = 2.4, by = 0.70)
+param <- list(a, aa, b, bb)
+h <- expand.grid(param)
+
+comb <- array(dim=c(6, 1, dim(h)[1]))                  #All possible param combinations
+comb[1,,] <- data$ytm[nrow(data)]                      #First param is the longest term bond rate (trailing maturity)
+comb[2,,] <- diff(data$ytm[c(nrow(data), 1)])          #Second param = ST - LT bond rate
+comb[3:dim(comb)[1],,] <- t(h)                         #Last four parameters to be determined by grid search
+
 #Retrieving squared differences for all param combinations and sorting
 SSQRA <- GSS1(x = comb, m = data$term, r = data$ytm)
 
 #finding out the combination with the lowest SSQ
-cmatrix <- comb[-c(1:2),,apply(SSQRA, 1, which.min)]
+cmatrix <- comb[-c(1:2),,apply(SSQRA, 1, which.min)] %>% data.frame %>%  mutate(across(, ~ifelse(.==0, 1e-6, .)))
+cmatrix <- split(unlist(cmatrix), 1:4)
+
+param_2 <- mapply(c, param, cmatrix)
+param_2 <- data.frame(unlist(cmatrix), do.call(rbind, lapply(param_2, function(x) head(sort(diff(sort(x))),2)))) %>% 
+  rename_all(~c("central", "lower", "upper"))
+
+range_2 <- param_2 %>% rowwise() %>% mutate(max = max(across(2:3)))
+range_2 <- param_2$central + cbind(- range_2$max,  range_2$max)
+
 
 ################################### Second grid search for the 6 parameters of the NSS function    ########################
 
 #Creation of a narrower set of values around best values obtained in the first grid search
-range <- unlist(lapply(param, function(x) diff(range(x))/2))
-param_2 <- data.frame(cmatrix + cbind(-range, range)) %>% rename_all(~c("lower", "upper"))
-
-step <- apply(param_2,1,diff)/(lengths(param)-1)
-new_set <- mapply("*", apply(param_2/step, 1, function(x) Reduce(seq, x)), as.list(step))
+spread <- apply(range_2,1,diff)/(lengths(param)-1)
+new_set <- mapply("*", apply(range_2/spread, 1, function(x) Reduce(seq, x)), as.list(spread))
 hh <- expand.grid(new_set)
 
 comb2 <- comb                                      #First 2 parameters do not change
@@ -103,13 +115,18 @@ comb2[3:dim(comb2)[1], , ] <- t(hh)               #Next 4 param are given by the
 SSQRB <- GSS1(x = comb2, m = data$term, r = data$ytm)
 print(min(SSQRB)/min(SSQRA)<1)              #Check that new parameters helped minimize SSQ
 
-cmatrix_2 <- comb2[, , apply(SSQRB, 1, which.min)] 
-cmatrix_3 <- cmatrix_2[-c(1:2) ] 
+cmatrix_2 <- comb2[, , apply(SSQRB, 1, which.min)] %>% data.frame %>%  mutate(across(, ~ifelse(.==0, 1e-6, .)))
+cmatrix_3 <- split(cmatrix_2[-c(1:2), ], 1:4)
 
-param_3 <- data.frame(cmatrix_3 + cbind(-range, 0, range)) %>% rename_all(~c("lower", "central", "upper"))
+param_3 <- mapply(c, new_set, cmatrix_3)
+param_3 <- data.frame(unlist(cmatrix_3), do.call(rbind,lapply(param_3, function(x) head(sort(diff(sort(x))), 2)))) %>% 
+  rename_all(~c("central", "lower", "upper"))
 
-lower <- c(0.9*cmatrix_2[1:2], param_3$lower)
-upper <- c(1.1*cmatrix_2[1:2], param_3$upper)
+range_3 <- param_3 %>% rowwise() %>% mutate(max = max(across(2:3)))
+range_3 <- param_3$central + data.frame(lower = -range_3$max, start = 0, upper = range_3$max)
+
+lower <- c(0.9*cmatrix_2[1:2,], range_3$lower)
+upper <- c(1.1*cmatrix_2[1:2,], range_3$upper)
 replace <- lower>upper
 reorder_1 <- lower[replace]
 reorder_2 <- upper[replace]
@@ -132,8 +149,8 @@ objective <- function(x){
 }
 
 #What it the SSQ between observed rates and theoretical rates calculated with initial conditions of param?
-GSS(x = cmatrix_2, m = data$term, r = data$ytm)
-objective( x = cmatrix_2)
+GSS(x = cmatrix_2[,i], m = data$term, r = data$ytm)
+objective( x = cmatrix_2[,i])
 
 #Calibration of the 6 parameters
 CI <- c(lower, -upper)
@@ -142,7 +159,7 @@ UI <- rbind(diag(6), -diag(6))
 #changer l'expression de la valeur initiale
 para <- CV <- error <- list()
 for (i in 1:(ncol(data)-1)){
-  sol <- constrOptim(cmatrix_2, objective, NULL, ui = UI, ci = CI, mu = 1e-05, 
+  sol <- constrOptim(cmatrix_2[,i], objective, NULL, ui = UI, ci = CI, mu = 1e-05, 
                      control = list(iter.max = 2000), method = "Nelder-Mead")
   para[[i]] <- sol$par
   CV[[i]] <- sol$convergence
@@ -159,7 +176,8 @@ NSS <- function(x){
   for (i in 1:nrow(curve)){ 
     curve[i,] <- para[i,1] + para[i, 2]*(1-exp(-x/para[i, 5]))/(x/para[i, 5]) +
       para[i, 3]*((1-exp(-x/para[i, 5]))/(x/para[i, 5])-exp(-x/para[i, 5])) +
-      para[i, 4]*((1-exp(-x/para[i, 6]))/(x/para[i, 6])-exp(-x/para[i, 6]))}
+      para[i, 4]*((1-exp(-x/para[i, 6]))/(x/para[i, 6])-exp(-x/para[i, 6]))
+  }
   return(curve)
 }
 
