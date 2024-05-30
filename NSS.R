@@ -1,7 +1,11 @@
-require("pacman")
-pacman::p_load("nloptr","readxl","dplyr","tidyr")
 
 ################################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL  ################################
+
+require("pacman")
+pacman::p_load("nloptr","readxl","dplyr","tidyr", "ggplot2")
+
+
+#############################     SENSITIVITY OF THE MODEL TO ITS PARAMETERS    ###########################
 
 #Influence of the different parameters on the shape of the curve:
 
@@ -11,42 +15,87 @@ coeff <- data.frame(matrix(c(0.02, -0.02, "", 0.06, "", 13), nrow = 4, ncol = 6,
 coeff_2 <- coeff_3 <- coeff
 
 #varying the values of beta_3
-coeff_2$beta_3 <- c(-8, -2, 2, 10)/100
-coeff_2$lambda_1 <- 1
-coeff_2 <- data.frame(apply(coeff_2, 2, as.numeric))
+coeff_2 <- coeff_2 %>% mutate(beta_3 = c(-8, -2, 2, 10)/100, lambda_1 = 1) %>% mutate_all(as.numeric)
+coeff_2 <- split(coeff_2, coeff_2$beta_3)
 
 #varying the values of lambda_1
-coeff_3$beta_3 <- 0.1
-coeff_3$lambda_1 <- c(0.2,0.5,1,2)
-coeff_3 <- data.frame(apply(coeff_3, 2, as.numeric))
+coeff_3 <- coeff_3 %>% mutate(lambda_1 = c(0.2,0.5,1,2), beta_3 = 0.1) %>% mutate_all(as.numeric)
+coeff_3 <- split(coeff_3, coeff_3$lambda_1)
 
-matu <- (1:120)/12
+############################################  NS MODEL ############################################
 
-sub <- function(x, y) {y[,1]*((1-exp(-x/y[,2]))/(x/y[,2])-exp(-x/y[,2]))}
+#the function describing the hump of the curve
+hump <- function(x, y) { x[,1]*((1-exp(-y/x[,2]))/(y/x[,2])-exp(-y/x[,2])) }
 
-NSS_test <- function(x, y){
-  curve <- y[,1] + y[,2]*(1-exp(-x/y[,5]))/(x/y[,5]) + sub(x, y[,c(3,5)])+ sub(x, y[,c(4,6)])
+NS_test <- function(x, y){
+  curve <- x[,1] + x[,2]*(1-exp(-y/x[,4]))/(y/x[,4]) + hump(x[,3:4], y)
   return(curve)
 }
 
 col <- rainbow(4)
+matu <- (1:120)/12
 
-yield <- lapply(split(coeff_2, coeff_2$beta_3), function(x) 100*NSS_test(matu, x))
+NS_1 <- lapply(coeff_2, function(x) 100*NS_test(x[c(1:3,5)], matu))
 
-plot(NA, type="l", xlim = range(matu), ylim = range(yield), xlab="term (years)", ylab="ytm (%)")
-lapply(yield, function(x, t) lines(matu, x), t=t)
-text(x = matu[30], y = lapply(yield, function(x) x[[30]]), pos = 1, col = col, cex = 1.5, 
-     label = parse(text = sprintf("beta[3]==%s", coeff_2$beta_3)))
+plot(NA, type="l", xlim = range(matu), ylim = range(NS_1), xlab = "term (years)", ylab = "ytm (%)")
+lapply(NS_1, function(x, t) lines(matu, x), t=t)
+text(x = matu[30], y = lapply(NS_1, function(x) x[30]), pos = 1, col = col, cex = 1.5, 
+     label = parse(text = sprintf("beta[3]==%s", names(lapply(coeff_2, function(x) grep("beta_3", x))))))
 
-yield_2 <- lapply(split(coeff_3, coeff_3$lambda_1), function(x) 100*NSS_test(matu, x))
+NS_2 <- lapply(coeff_3, function(x) 100*NS_test(x[c(1:3,5)], matu))
 
-plot(NA, type="l", xlim = range(matu), ylim = range(yield_2), xlab="term (years)", ylab="ytm (%)")
-lapply(yield_2, function(x, t) lines(matu, x), t=t)
-text(x = matu[60], y = lapply(yield_2, function(x) x[[60]]), col = col, cex = 1.5, pos = 1, 
-     label = parse(text = sprintf("lambda[1]==%s", coeff_3$lambda_1)))
+plot(NA, type="l", xlim = range(matu), ylim = range(NS_2), xlab="term (years)", ylab="ytm (%)")
+lapply(NS_2, function(x, t) lines(matu, x), t=t)
+text(x = matu[60], y = lapply(NS_2, function(x) x[60]), pos = 1, col = col, cex = 1.5, 
+     label = parse(text = sprintf("lambda[1]==%s", names(lapply(coeff_3, function(x) grep("lambda_1", x))))))
+
+############################################  NSS MODEL ############################################
+
+NSS_test <- function(x, y){
+  curve <- x[,1] + x[,2]*(1-exp(-y/x[,5]))/(y/x[,5]) + hump(x[,c(3,5)], y)+ hump(x[,c(4,6)], y)
+  return(curve)
+}
+
+NSS_1 <- 100*mapply(NSS_test, coeff_2, list(matu))
+NSS_1 <- split(t(NSS_1), 1: length(coeff_2))
+
+plot(NA, type="l", xlim = range(matu), ylim = range(NSS_1), xlab="term (years)", ylab="ytm (%)")
+lapply(NSS_1, function(x, t) lines(matu, x), t=t)
+text(x = matu[30], y = lapply(NSS_1, function(x) x[[30]]), pos = 1, col = col, cex = 1.5, 
+     label = parse(text = sprintf("beta[3]==%s", names(lapply(coeff_2, function(x) grep("beta_3", x))))))
+
+NSS_2 <- lapply(coeff_3, function(x) 100*NSS_test(x, matu))
+
+plot(NA, type="l", xlim = range(matu), ylim = range(NSS_2), xlab="term (years)", ylab="ytm (%)")
+lapply(NSS_2, function(x, t) lines(matu, x), t=t)
+text(x = matu[60], y = lapply(NSS_2, function(x) x[[60]]), col = col, cex = 1.5, pos = 1, 
+     label = parse(text = sprintf("lambda[1]==%s", names(lapply(coeff_2, function(x) grep("lambda_1", x))))))
+
+##########################   CORRELATION BETWEEN 2nd AND 3nd FACTOR LOADINGS   ###########################
+
+loading_1 <- function(x, y){ (1-exp(-y/x))/(y/x) }
+loading_2 <- function(x, y) { (loading_1(x ,y) - exp(-y/x)) }
+
+lambda <- seq(0.1, 25, 0.1)
+
+#values of 2nd and third factor loadings for all tested values of lambda_1
+hump_1 <- lapply(lambda, function(x) loading_1(x, matu))
+hump_2 <- lapply(lambda, function(x) loading_2(x, matu))
+
+#correlation between the two loadings for all tested values of lambda_1
+correl <- mapply(cor, hump_1, hump_2)
+correl <- data.frame(lambda = lambda, correlation = correl)
+
+ggplot(correl) + geom_point(aes(lambda, correlation))
+
+#which values of lambda_1 generate a low correlation between the two factor loadings
+lambda_cible <- lambda[ abs(correl$correlation) < 0.8]
+
+lam_1 <- tail(lambda_cible,  trunc(length(lambda_cible)/2))  #tested values for lambda_1
+lam_2 <- head(lambda_cible,  trunc(length(lambda_cible)/2))  #tested values for lambda_2
 
 
-################################         CALIBRATION OF PARAMETERS           ################################
+################################   LINEARIZATION OF THE ESTIMATION PROCEDURE    ########################
 
 #I load the data
 data <- read_excel("French_bonds_06_10_2023.xlsx",1) %>% filter(!Series%in%c("OATe","OATi")) %>%
@@ -54,6 +103,39 @@ data <- read_excel("French_bonds_06_10_2023.xlsx",1) %>% filter(!Series%in%c("OA
   mutate(term = (as.Date(term, format= "%d/%m/%Y") - as.Date("2023-10-06"))/365) %>% 
   mutate(term = as.numeric(term), ytm = ytm/100) %>% filter(term<=10)
 
+#values of the different factor loadings for the different values of lambdas
+load_2 <- lapply(lam_1, function(x) loading_1(x, data$term))
+load_3 <- lapply(lam_1, function(x) loading_2(x, data$term))
+load_4 <- lapply(lam_2, function(x) loading_2(x, data$term))
+
+#Running an OLS with different values of lambda_1 and lambda_2
+RSS <- list()
+for (i in 1:length(lam_1)){
+  RSS[[i]] <- list()
+  for (j in 1:length(lam_2)){
+    RSS[[i]][[j]] <- summary(lm(data$ytm ~ load_2[[i]] + load_3[[i]] + load_4[[j]]))[[6]]
+  }
+  RSS[[i]] <- unlist(RSS[[i]])
+}
+RSS <- do.call(rbind, RSS)
+lambda_opt <- which(RSS == min(RSS), arr.ind=TRUE)
+
+#keeping the combination of lambdas with best goodness of fit
+para <- data.frame(matrix(c(summary(lm(data$ytm ~ load_2[[lambda_opt [1]]] + 
+                        load_3[[lambda_opt [1]]] + load_4[[lambda_opt [2]]]))[[4]][,1],
+           lam_1[lambda_opt [1]], lam_2[lambda_opt [2]]), nrow =1, ncol = 6))
+colnames(para) <- colnames(coeff)
+
+col <- c("indianred", "darkblue")
+cex <- 0.8
+par(mar=c(6,4,4,4) + 0.1, xpd=T, cex.axis=cex)
+plot(matu, 100*NSS_test(para, matu), xlim = range(c(matu, data$term)), col=col[1], pch="20", type = "l",
+     ylim = 100*range(c(NSS_test(para, matu), data$ytm)), xlab = "term (years)", ylab = "ytm (%)")
+lines(data$term, 100*data$ytm, col=col[2])
+legend("bottom", horiz=T, bty="n", inset=c(-0.05,-0.25), legend=c("theoretical yields", "market yields"), lty=1,
+       text.col=col, col=col)
+
+################################   NON LINEAR ESTIMATION PROCEDURE    ################################
 
 #A function to compute the sum of squares between theoretical and market rates for different combinations of param
 GSS1 <- function(x, m, r){
