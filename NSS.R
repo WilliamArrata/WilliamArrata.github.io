@@ -5,7 +5,7 @@ require("pacman")
 pacman::p_load("nloptr","readxl","dplyr","tidyr", "ggplot2")
 
 
-#############################     SENSITIVITY OF THE MODEL TO ITS PARAMETERS    ###########################
+###################################     PARAMETERS OF THE MODEL     #################################
 
 #Influence of the different parameters on the shape of the curve:
 
@@ -76,7 +76,7 @@ text(x = matu[60], y = lapply(NSS_2, function(x) x[[60]]), col = col, cex = 1.5,
 loading_1 <- function(x, y){ (1-exp(-y/x))/(y/x) }
 loading_2 <- function(x, y) { (loading_1(x ,y) - exp(-y/x)) }
 
-lambda <- seq(0.1, 25, 0.1)
+lambda <- seq(0.1, 15, 0.001)
 
 #values of 2nd and third factor loadings for all tested values of lambda_1
 hump_1 <- lapply(lambda, function(x) loading_1(x, matu))
@@ -86,16 +86,29 @@ hump_2 <- lapply(lambda, function(x) loading_2(x, matu))
 correl <- mapply(cor, hump_1, hump_2)
 correl <- data.frame(lambda = lambda, correlation = correl)
 
-ggplot(correl) + geom_point(aes(lambda, correlation))
+#values of 2nd and third factor loadings for all tested values of lambda_1 for a smaller set of maturities
+hump_1_n <- lapply(lambda, function(x) loading_1(x, tail(head(matu, -20), -20)))
+hump_2_n <- lapply(lambda, function(x) loading_2(x, tail(head(matu, -20), -20)))
 
-#which values of lambda_1 generate a low correlation between the two factor loadings
+#correlation between the two loadings for all tested values of lambda_1 for a smaller set of maturities
+correl_n <- mapply(cor, hump_1_n, hump_2_n)
+correl_n <- data.frame(lambda = lambda, correlation = correl_n)
+
+#graph
+ggplot(correl, aes(lambda, correlation)) +  geom_point(aes(color = "maturity spectrum: 0-10Y"), size = 0.5) +
+  geom_point(data = correl_n, aes(lambda, correlation, color = "maturity spectrum : 2-8Y"), size = 0.5) +
+  scale_y_continuous(labels = scales::percent)  +
+  labs(y = "correlation between slope and curvature factors", x = "values of lambda_1") +
+  theme(legend.position = "bottom", legend.title=element_blank(), plot.margin = margin(.8,.5,.8,.5, "cm"))
+
+################################   LINEARIZATION OF THE ESTIMATION PROCEDURE    ########################
+
+#which values of lambda_1 generate a low correlation between the two factor loadings and will be tested
 lambda_cible <- lambda[ abs(correl$correlation) < 0.8]
 
 lam_1 <- tail(lambda_cible,  trunc(length(lambda_cible)/2))  #tested values for lambda_1
 lam_2 <- head(lambda_cible,  trunc(length(lambda_cible)/2))  #tested values for lambda_2
 
-
-################################   LINEARIZATION OF THE ESTIMATION PROCEDURE    ########################
 
 #I load the data
 data <- read_excel("French_bonds_06_10_2023.xlsx",1) %>% filter(!Series%in%c("OATe","OATi")) %>%
@@ -108,32 +121,39 @@ load_2 <- lapply(lam_1, function(x) loading_1(x, data$term))
 load_3 <- lapply(lam_1, function(x) loading_2(x, data$term))
 load_4 <- lapply(lam_2, function(x) loading_2(x, data$term))
 
-#Running an OLS with different values of lambda_1 and lambda_2
+#Grid search based OLS
 RSS <- list()
 for (i in 1:length(lam_1)){
   RSS[[i]] <- list()
   for (j in 1:length(lam_2)){
-    RSS[[i]][[j]] <- summary(lm(data$ytm ~ load_2[[i]] + load_3[[i]] + load_4[[j]]))[[6]]
+    RSS[[i]][[j]] <- summary(lm(data$ytm ~ load_2[[i]] + load_3[[i]] + load_4[[j]]))$sigma
   }
   RSS[[i]] <- unlist(RSS[[i]])
 }
 RSS <- do.call(rbind, RSS)
 lambda_opt <- which(RSS == min(RSS), arr.ind=TRUE)
 
+reg <- data.frame(y = data$ytm, x_2 = load_2[[lambda_opt [1]]], x_3 = load_3[[lambda_opt [1]]], 
+                  x_4 = load_4[[lambda_opt [2]]])
+
+model <- lm(y ~x_2 + x_3 + x_4, data = reg)
+
 #keeping the combination of lambdas with best goodness of fit
-para <- data.frame(matrix(c(summary(lm(data$ytm ~ load_2[[lambda_opt [1]]] + 
-                        load_3[[lambda_opt [1]]] + load_4[[lambda_opt [2]]]))[[4]][,1],
-           lam_1[lambda_opt [1]], lam_2[lambda_opt [2]]), nrow =1, ncol = 6))
+para <- data.frame(matrix(c(summary(model)$coefficients[,1], lam_1[lambda_opt [1]], lam_2[lambda_opt [2]]), 
+                          nrow =1, ncol = 6))
 colnames(para) <- colnames(coeff)
 
+#graph
 col <- c("indianred", "darkblue")
 cex <- 0.8
+
 par(mar=c(6,4,4,4) + 0.1, xpd=T, cex.axis=cex)
 plot(matu, 100*NSS_test(para, matu), xlim = range(c(matu, data$term)), col=col[1], pch="20", type = "l",
      ylim = 100*range(c(NSS_test(para, matu), data$ytm)), xlab = "term (years)", ylab = "ytm (%)")
 lines(data$term, 100*data$ytm, col=col[2])
 legend("bottom", horiz=T, bty="n", inset=c(-0.05,-0.25), legend=c("theoretical yields", "market yields"), lty=1,
        text.col=col, col=col)
+
 
 ################################   NON LINEAR ESTIMATION PROCEDURE    ################################
 
