@@ -39,4 +39,4 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 
 | **TOPIC** | **SLIDES** | **CODE**|
 | :---        |     :---:      | :---:  |
-| **Calibration of Risk Neutral Densities** |   [RND.pdf](https://github.com/WilliamArrata/WilliamArrata/files/14616211/RND.pdf) | to come |
+| **Calibration of Risk Neutral Densities** |  [RND_short_version.pdf](https://github.com/user-attachments/files/15849130/RND_short_version.pdf)  | to come |
