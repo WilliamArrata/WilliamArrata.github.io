@@ -9,7 +9,7 @@ options <- read_excel("inputs/OATA_options_31_mai_2023.xlsx",1) %>% row_to_names
   rename_with(~c("call_strike", "put_strike", "call_price", "put_price"))
 
 #2. Futures contracts prices and maturities
-charac <- options %>% mutate(mat = row_number()) %>% filter(call_price=="matu") %>% 
+charac <- options %>% mutate(mat = row_number()) %>% filter(if_any(everything(), ~ grepl('matu',.))) %>% 
   mutate(option_matu = word(call_strike, 1, 3), fut_price = as.numeric( word(call_strike, -1))) %>% 
   mutate(terms = as.numeric(gsub('[^0-9.-]','', word(option_matu, 2)))/365, fut_contract = word(call_strike,-2)) %>%
   select(-colnames(options)) %>% mutate_at("option_matu", ~as.Date(gsub("\\).*","",word(.,-1)), format = "%m/%d/%y"))
