@@ -6,7 +6,7 @@ pacman::p_load("stringr", "Hmisc", "stats", "readxl", "data.table", "zoo", "dply
 #1. Options prices
 options <- read_excel("inputs/ERA_options_31_mai_2023.xlsx")  %>% row_to_names(row_number = 1) %>% 
   clean_names() %>% select(contains(c("strike", "last"))) %>% mutate_if(is.character, ~replace_na(.,"matu")) %>% 
-  rename_with(~c("call_strike", "put_strike", "call_price", "put_price"))
+  rename_with(~c(outer(c("call_", "put_"), c("strike", "price"), paste0)))
 
 #2. Futures contracts prices and maturities
 charac <- options %>% mutate(mat = row_number()) %>% filter(if_any(everything(), ~ grepl('matu',.))) %>% 
