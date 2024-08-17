@@ -78,6 +78,7 @@ objective <- function(x){ MSE_2_log(c(x[1:4], PR[i], rep(0.5, 2))) }
 #Calibration of the 7 parameters using market data
 mat <- c(charac$mat,nrow(options))                         #adding one last term to mat for the loop
 params <- CV <- PX <- range_px <- nb_opt <- list()
+x_axis <- c(0.5, 1.3)
 
 for (m in 1:length(charac$terms)){
   
@@ -90,7 +91,7 @@ for (m in 1:length(charac$terms)){
   P <- prices$put_price                                            #prices of puts for maturity m
   KC <- KP <- prices$call_strike                                   #strikes of options for maturity m
   FWD <- charac$fut_price[m]/100                                   #future price for maturity m
-  range_px[[m]] <- c(0.8, 1.3)*range(KC, na.rm = T)               #the range of strike for matu m
+  range_px[[m]] <- x_axis*range(KC, na.rm = T)               #the range of strike for matu m
   PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to comput PDF and CDF
   nb_opt[[m]] <- nrow(prices)                                      #number of options for matu m
   
@@ -180,7 +181,7 @@ for (m in 1:length(charac$terms)){
   P <- prices$put_price                                            #prices of puts for maturity m
   KC <- KP <- prices$call_strike                                   #strikes of options for maturity m
   FWD <- charac$fut_price[m]/100                                   #future price for maturity m
-  range_px[[m]] <- c(0.8, 1.3)*range(KC, na.rm = T)               #the range of strike for matu m
+  range_px[[m]] <- x_axis*range(KC, na.rm = T)               #the range of strike for matu m
   PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to comput PDF and CDF
   nb_opt[[m]] <- nrow(prices)                                      #number of options for matu m
   
@@ -347,15 +348,15 @@ SK_y <- moments(3)/SD_y^3
 KU_y <- moments(4)/SD_y^4
 
 #all statistics at a glance
-desc_stats <- bond_fut %>% bind_cols(t(sapply(range_px, function(x) x/c(0.008, 0.013)))) %>%
-  rename_at(14:15, ~c("highest_strike", "lowest_strike")) %>% 
-  mutate_at(vars(contains("strike")), ~ .*conv_factor + acc) %>% 
-  mutate(fut_rate = 100*unlist(y_fut)) %>% 
-  mutate_at(vars(contains("strike")), ~ 100*xirr(cf = c(-., rep(ctd_cp, trunc(years)), 100 + ctd_cp), 
-                              tau = c(0, (0:years) + years - trunc(years)), comp_freq = 1, interval = c(0, 10))) %>% 
-  select(c(fut_contract, option_matu, fut_rate, lowest_strike, highest_strike)) %>% 
+desc_stats <- bond_fut %>% bind_cols(t(sapply(range_px, function(x) x/x_axis))) %>%
+  rename_at(14:15, ~c("min_strike", "max_strike")) %>%
+  mutate_at(vars(contains("strike")), ~ .*conv_factor + acc) %>%
+  mutate(fut_rate = 100*unlist(y_fut)) %>%
+  mutate_at(vars(contains("strike")), ~ 100*xirr(cf = c(-., rep(ctd_cp, trunc(years)), 100 + ctd_cp),
+                                                 tau = c(0, (0:years) + years - trunc(years)), comp_freq = 1, interval = c(0, 10))) %>%
+  select(c(fut_contract, option_matu, fut_rate, min_strike, max_strike)) %>%
   bind_cols(100*E_y, 100*SD_y, SK_y, KU_y, nb_opt = unlist(nb_opt)) %>%
-  rename_at(6:9, ~c("mean", "stddev", "skewness", "kurtosis")) 
+  rename_at(6:9, ~c("mean (%)", "stddev (%)", "skewness", "kurtosis"))
 
 #a few quantiles
 nb_q <- 1000
