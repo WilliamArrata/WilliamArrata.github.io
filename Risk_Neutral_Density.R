@@ -1,5 +1,5 @@
 require("pacman")
-pacman::p_load("stringr", "Hmisc", "stats", "readxl", "data.table", "zoo", "dplyr", "tidyr", "janitor")
+pacman::p_load("stringr", "Hmisc", "stats", "readxl", "data.table", "zoo", "dplyr", "tidyr", "janitor", "ggplot2")
 
 ##########################################   DOWNLOAD DATA    ##########################################
 
