@@ -78,19 +78,20 @@ objective <- function(x){ MSE_2_log(c(x[1:4], PR[i], rep(0.5, 2))) }
 #Calibration of the 7 parameters using market data
 mat <- c(charac$mat,nrow(options))                         #adding one last term to mat for the loop
 params <- CV <- PX <- range_px <- nb_opt <- list()
+x_axis <- c(0.9, 1.05)
 
 for (m in 1:length(charac$terms)){
   
   #Elements of the option price function which are not random variables
   T <- charac$terms[m]                                             #maturity m
   r <- rates_n[m]                                                  #discount rate for maturity m
-  prices <- options %>% select(-put_strike) %>% slice(mat[m]:mat[m+1]) %>% 
-    mutate_if(is.character, as.numeric) %>% na.omit %>% mutate_all(funs(./100))
+  prices <- options %>% select(-put_strike) %>% slice(mat[m]:mat[m+1]) %>%
+      mutate_if(is.character, as.numeric) %>% na.omit %>% mutate_all(funs(./100))
   C <- prices$call_price                                           #prices of calls for maturity m
   P <- prices$put_price                                            #prices of puts for maturity m
   KC <- KP <- prices$call_strike                                   #strikes of options for maturity m
   FWD <- charac$fut_price[m]/100                                   #future price for maturity m
-  range_px[[m]] <- c(0.9, 1.05)*range(KC, na.rm = T)               #the range of strike for matu m
+  range_px[[m]] <- x_axis*range(KC, na.rm = T)                    #the augmented range of strike for mat
   PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to comput PDF and CDF
   nb_opt[[m]] <- nrow(prices)                                      #number of options for matu m
   
@@ -180,7 +181,7 @@ for (m in 1:length(charac$terms)){
   P <- prices$put_price                                            #prices of puts for maturity m
   KC <- KP <- prices$call_strike                                   #strikes of options for maturity m
   FWD <- charac$fut_price[m]/100                                   #future price for maturity m
-  range_px[[m]] <- c(0.9, 1.05)*range(KC, na.rm = T)               #the range of strike for matu m
+  range_px[[m]] <- x_axis*range(KC, na.rm = T)                    #the augmented range of strike for mat
   PX[[m]] <- Reduce(seq, 1e4*range_px[[m]])*1e-4                   #values of x to comput PDF and CDF
   nb_opt[[m]] <- nrow(prices)                                      #number of options for matu m
   
@@ -318,8 +319,8 @@ SK_y <- moments(3)/SD_y^3
 KU_y <- moments(4)/SD_y^4
 
 charac <- charac %>% select(-c(mat, fut_contract)) %>% mutate(fut_rate = 100 - fut_price) %>%
-  bind_cols((1-t(sapply(range_px, rev))/c(1.05, 0.95))*100, nb_opt = unlist(nb_opt), 100*E_y, 100*SD_y, SK_y, KU_y) %>%
-  rename_at(c(5,6,8:11), ~c("lowest_strike", "highest_strike", "mean", "stddev", "skewness", "kurtosis"))
+  bind_cols(t(100*(1-sapply(range_px, rev)/rev(x_axis))), nb_opt = unlist(nb_opt), 100*E_y, 100*SD_y, SK_y, KU_y) %>%
+  rename_at(c(5,6,8:11), ~c("min_strike (%)", "max_strike (%)", "mean (%)", "stddev (%)", "skewness", "kurtosis"))
 
 #a few quantiles
 nb_q <- 100
