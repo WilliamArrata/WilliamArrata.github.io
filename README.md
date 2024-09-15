@@ -23,21 +23,21 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 
 | **TOPIC** | **SLIDES** | **CODE**| **DATA**| **EXERCISES**|**CORRECTIONS**|
 | :---        |     :---:      | :---:  |  :---:  | :---:  | :---:  |
-| **Portfolio: risk, return and diversification**   |   [risk_diversification_new.pdf](https://github.com/WilliamArrata/WilliamArrata/files/15082148/risk_diversification_new.pdf) | to come | to come |  |  |
+| **Portfolio: risk, return and diversification**   |   [risk_diversification_new.pdf](https://github.com/user-attachments/files/16933916/risk_diversification_new.pdf)| to come | to come |  |  |
 | **Portfolio construction: the mean variance framework**  |    [mean_variance.pdf](https://github.com/WilliamArrata/WilliamArrata/files/15082155/mean_variance.pdf)|  to come  | to come |  [FINM32225_exercises_1_to_8.pdf](https://github.com/WilliamArrata/WilliamArrata/files/13540125/FINM32225_exercises_1_to_8.pdf) |  [FINM31261_exercises_1_to_8_correction.pdf](https://github.com/WilliamArrata/WilliamArrata/files/14330664/FINM31261_exercises_1_to_8_correction.pdf)|
 | **The Capital Asset Pricing Model**     |   [CAPM_test.pdf](https://github.com/WilliamArrata/WilliamArrata/files/14543209/CAPM_test.pdf) |  to come  | to come | [FINM31261_exercises_9_to_11.pdf](https://github.com/WilliamArrata/WilliamArrata/files/13540129/FINM31261_exercises_9_to_11.pdf) |  [FINM32225_exercises_9_to_11_corrections.pdf](https://github.com/WilliamArrata/WilliamArrata/files/12843597/FINM32225_exercises_9_to_11_corrections.pdf)  |
 | **Implementation of the Markowitz framework:** <br /> **resampling, shrinkage, and the Black Litterman Model**  |   [Black_Litterman.pdf](https://github.com/WilliamArrata/WilliamArrata/files/14732077/Black_Litterman.pdf) | to come  | to come |   [FINM32225_exercises_12_to_15.pdf](https://github.com/WilliamArrata/WilliamArrata/files/12843606/FINM32225_exercises_12_to_15.pdf)  |  [FINM31261_exercises_12_to_15_corrections.pdf](https://github.com/WilliamArrata/WilliamArrata/files/13540134/FINM31261_exercises_12_to_15_corrections.pdf)|
 | **Index linked portfolio management**     |   [Index-linked.pdf](https://github.com/WilliamArrata/WilliamArrata/files/14522480/Index-linked.pdf) | to come  | to come |  | | 
 | **Benchmark & Performance Attribution**  | [Benchmarks_performance_attribution.pdf](https://github.com/WilliamArrata/WilliamArrata/files/13198696/Benchmarks_performance_attribution.pdf)| to come  | to come |  [FINM31261_exercises_16_to_17.pdf](https://github.com/WilliamArrata/WilliamArrata/files/13047025/FINM31261_exercises_16_to_17.pdf) |   [FINM32225_exercises_16_to_17_corrections.pdf](https://github.com/WilliamArrata/WilliamArrata/files/12843616/FINM32225_exercises_16_to_17_corrections.pdf) | 
 | **Portfolio insurance techniques**     |    [CPPI_new.pdf](https://github.com/user-attachments/files/15522245/CPPI_new.pdf)  | to come  | to come | [FINM32225_exercises_18.pdf](https://github.com/WilliamArrata/WilliamArrata/files/12843621/FINM32225_exercises_18.pdf) |   [FINM32225_exercises_18_correction.pdf](https://github.com/WilliamArrata/WilliamArrata/files/12843625/FINM32225_exercises_18_correction.pdf)| 
-| **Style Investing**     |  [style_investing.pdf](https://github.com/WilliamArrata/WilliamArrata/files/13376444/style_investing.pdf)|  |  |  | 
+| **Style Investing**     |    [style_investing_site.pdf](https://github.com/user-attachments/files/16942766/style_investing_site.pdf) |  |  |  | 
 | **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  |  |  |  | 
-| **Exchange-Traded Funds part 2**     |   [ETF_trading.pdf](https://github.com/WilliamArrata/WilliamArrata/files/14670673/ETF_trading.pdf) |   |    |     |
+| **Exchange-Traded Funds part 2**     |   [ETF_trading.pdf](https://github.com/user-attachments/files/16965813/ETF_trading.pdf)|   |    |     |
 
 ### **OTHER TOPICS IN QUANTITATIVE FINANCE**
 ***
 
 | **TOPIC** | **SLIDES** | **CODE**|
 | :---        |     :---:      | :---:  |
-| **Calibration of Risk Neutral Densities** |  [RND_short_version.pdf](https://github.com/user-attachments/files/15849130/RND_short_version.pdf)  | to come |
+| **Calibration of Risk Neutral Densities** |   [RND_div_paying_short_version.pdf](https://github.com/user-attachments/files/16933952/RND_div_paying_short_version.pdf)| to come |
 | **Calibration of Nelson Siegel Svensson Model** |   [NSS_short_version.pdf](https://github.com/user-attachments/files/16019273/NSS_short_version.pdf)| to come |
