@@ -32,7 +32,7 @@ legend("bottom", horiz=T, bty="n",inset=c(-0.05,-0.35),legend=c("calls","puts"),
 rates <- read_excel("inputs/EUR_rates.xlsx") %>% mutate_if(is.character, as.numeric)
 
 #get by linear extrapolation a risk free rate at each option maturity
-rates_n <- approxExtra(rates$term, rates$Yield, xout=charac$terms, method = "linear", n = 50, rule = 2, f = 0, 
+rates_n <- approxExtrap(rates$term, rates$Yield, xout=charac$terms, method = "linear", n = 50, rule = 2, f = 0, 
                         ties = "ordered", na.rm = FALSE)$y/100
 
 ###############################  CALIBRATION OF PARAMETERS  ##########################################
