@@ -234,7 +234,7 @@ PDF <- function(x, y){
 DNR <- mapply(PDF, params, PX)
 mapply(function(x,y) sum(rollmean(x, 2)*diff(y)), DNR, PX)   #check that integral of PDF*dPX is worth 1
 
-#Graph of risk neutral densities for a sum of 2 or 3 lognormals
+#Graph of risk neutral densities of prices in base R
 co <- rainbow(nrow(charac))
 xlim <- range(PX, na.rm = T)
 ylim <- range(DNR)
@@ -251,6 +251,17 @@ mapply(lines, series, col = co)
 title(sub = "OAT future price (% of par)", adj = 1, line = 2)
 legend("bottom", inset = c(-0.05, -0.4), legend = format(as.yearmon(charac$option_matu), "%b %y"),
        horiz = T, col = co, lty = 1, bty = "n")
+
+#Graph of risk neutral densities of prices with ggplot2
+series <- lapply(mapply(cbind, series, as.character(charac$option_matu)), data.frame)
+series <- do.call(rbind, series) %>% rename_with(~c("price", "density", "maturity")) %>%
+  mutate_at(c("price", "density"), as.numeric)
+
+ggplot() + geom_line(data = series, aes(x= price, y = density,  colour =  maturity)) +
+  labs(title = "OAT futures prices (%)", subtitle = "Probability density functions") +
+  labs(y = "probability density", x = "futures prices (% of par)") + 
+  scale_x_continuous(labels = scales::percent, breaks = scales::pretty_breaks(n = 7)) +
+  theme(legend.position = "bottom", legend.title=element_blank(), plot.margin = margin(.8,.5,.8,.5, "cm"))
 
 #######################  CALCULATION OF ACCRUED COUPON OF CTDs AT OPTION MATURITY ###########################
 
@@ -291,7 +302,7 @@ for (i in 1:nrow(bond_fut)){
   tri[[i]] <- list()
   for (j in 1:length(P[[i]])){
     tri[[i]][[j]] <- xirr(cf = c(-P[[i]][[j]], cf[[i]], N[i]), tau = c(0, term[[i]][[1]]), comp_freq = 1, 
-                        interval = c(0, 10))}
+                          interval = c(0, 10))}
   tri[[i]]<-unlist(tri[[i]])}
 
 #############################  STATISTICS OF THE DISTRIBUTION #############################
@@ -321,12 +332,11 @@ mapply(lines, series_rev, col = co)
 legend("bottom", inset = c(-0.05,-0.2), legend = charac$option_matu, horiz = T, col=co, lty = 1, bty = "n")
 
 #graph of implied ytm densities using ggplot
-series_rev <- lapply(series_rev, data.frame)
+series_rev <- lapply(mapply(cbind, series_rev, as.character(charac$option_matu)), data.frame)
+series_rev <- do.call(rbind, series_rev) %>% rename_with(~c("ytm", "density", "maturity")) %>%
+  mutate_at(c("ytm", "density"), as.numeric)
 
-ggplot() + geom_line(data = series_rev[[1]], aes(x= X1, y = X2,  colour =  as.character(charac$option_matu[1]))) +
-  geom_line(data = series_rev[[2]], aes(x= X1, y = X2,  colour = as.character(charac$option_matu[2]))) +
-  geom_line(data = series_rev[[3]], aes(x= X1, y = X2,  colour = as.character(charac$option_matu[3]))) +
-  geom_line(data = series_rev[[4]], aes(x= X1, y = X2,  colour = as.character(charac$option_matu[4]))) +
+ggplot() + geom_line(data = series_rev, aes(x= ytm, y = density,  colour =  maturity)) +
   labs(title = "OAT future ytm (%)", subtitle = "Probability density functions") +
   labs(y = "probability density", x = "Cheapest-to-Deliver ytm") + 
   scale_x_continuous(labels = scales::percent, breaks = scales::pretty_breaks(n = 7)) +
@@ -356,7 +366,7 @@ par(mar = c(7, 6, 4, 4) + 0.1, xpd = T, cex.axis = cex)
 plot(NA, pch = 20, xlab = "", ylab = "cumulative probability", xlim = xlim_r, ylim = 0:1, las = 1,
      main = paste("RNDs from a mixture of", nb_log, "lognormals"))
 mapply(lines, series_CDF_tri, col = co)
-title(sub = "OAT future price (% of par)", adj = 1, line = 2)
+title(sub = "OAT future ytm (% of par)", adj = 1, line = 2)
 legend("bottom", inset = c(-0.05,-0.35), legend = charac$option_matu, horiz = T,col = co, lty = 1, bty = "n")
 
 
@@ -380,8 +390,8 @@ desc_stats <- bond_fut %>% bind_cols(t(sapply(range_px, function(x) x/x_axis))) 
   rename_at(6:9, ~c("mean (%)", "stddev (%)", "skewness", "kurtosis")) 
 
 #a few quantiles
-nb_q <- 10
-thres <- seq(nb_q)/nb_q
+nb_q <- 100
+thres <- c(1, 5, 25, 50, 75, 95, 99)/nb_q
 quantiles <- list()
 for (i in 1:nrow(charac)){
   quantiles[[i]] <- list()
@@ -392,21 +402,18 @@ for (i in 1:nrow(charac)){
   quantiles[[i]] <- unlist(quantiles[[i]])
 }
 
-rate_spot <- 0.02848
 
 #graph of quantiles through time with shaded areas
 quantiles_2 <- bind_cols(c(0, charac$terms), rbind(rate_spot, do.call(rbind, quantiles))) %>%
   rename_with(~c("term", paste0("q", nb_q*thres)))
 
 ggplot(quantiles_2, aes(x = term)) +
-  geom_ribbon(aes(ymin = q1, ymax = q9, fill = "80%-90%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q8, fill = "70%-80%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q7, fill = "60%-70%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q6, fill = "50%-60%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q5, fill = "40%-50%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q4, fill = "30%-40%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q3, fill = "20%-30%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q2, fill = "10%-20%"), alpha=0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q99, fill = "95%-99%"), alpha = 0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q95, fill = "75%-95%"), alpha = 0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q75, fill = "50%-75%"), alpha = 0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q50, fill = "25%-50%"), alpha = 0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q25, fill = "5%-25%"), alpha = 0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q5, fill = "1%-25%"), alpha = 0.2) +
   labs(x = "term (years)", y = "10Y OAT rate (%)") + scale_y_continuous(labels = scales::percent) +
   theme(legend.position= "bottom", legend.title=element_blank(), plot.margin = margin(1.2,.5,1.2,.5, "cm"))
 
@@ -418,11 +425,11 @@ quantiles_3 <- bind_cols(rep(c(0, charac$terms), c(unique(lengths(quantiles)), l
 
 ggplot(quantiles_3, aes(term, value, color = quantile)) +  geom_line() +
   labs(x = "term (years)", y = "10Y OAT rate (%)") + 
-  theme(legend.position= "bottom", plot.margin = margin(1.2,.5,1.2,.5, "cm")) +
+  theme(legend.position= "bottom", legend.title=element_blank(), plot.margin = margin(1.2,.5,1.2,.5, "cm")) +
   scale_y_continuous(labels = scales::percent) 
 
 
-#graph of quantile of order q for a given maturity
+#graph of quantile of order q for maturity d
 q <- 90
 d <- 2
 cutoff <- mean(PX[[d]][c(min(which(NCDF[[d]] > q/100 - 1e-5)),
