@@ -16,6 +16,9 @@ https://www.sciencedirect.com/science/article/abs/pii/S0304405X20301240?via%3Dih
 - William Arrata, Benoit Nguyen (2017), **Price Impact of bond supply shocks: Evidence from the
 Eurosystem’s asset purchase program, Banque de France Working Paper # 623**  
 https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/document-de-travail-623_2017-03.pdf
+- William Arrata, Alejandro Bernales, Virginie Coudert (2013), **The Effects of Derivatives on Underlying Financial Markets: Equity Options, Commodity Derivatives and Credit Default Swaps, SUERF, 50 Years of Money and Finance: Lessons and Challenges, Chapter 13**
+[50y_ch13_bernales_et_al.pdf](https://github.com/user-attachments/files/17090811/50y_ch13_bernales_et_al.pdf)
+
 
 ### **TEACHING**
 ***
