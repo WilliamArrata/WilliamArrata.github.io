@@ -374,15 +374,19 @@ quantiles_2 <- bind_cols(c(0, charac$terms), rbind(eur_spot, do.call(rbind, quan
   rename_with(~c("term", paste0("q", nb_q*thres)))
 
 ggplot(quantiles_2, aes(x = term)) +
-  geom_ribbon(aes(ymin = q1, ymax = q99, fill = "95%-99%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q95, fill = "75%-95%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q75, fill = "50%-75%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q50, fill = "25%-50%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q25, fill = "5%-25%"), alpha=0.2) +
-  geom_ribbon(aes(ymin = q1, ymax = q5, fill = "1%-25%"), alpha=0.2) +
+  geom_ribbon(aes(ymin = q1, ymax = q99, fill = "min-max")) +
+  geom_ribbon(aes(ymin = q1, ymax = q95, fill = "1st decile - 9th décile")) +
+  geom_ribbon(aes(ymin = q1, ymax = q75, fill = "1st quartile - 3rd quartile")) +
+  geom_ribbon(aes(ymin = q1, ymax = q25), fill = "mistyrose1") +
+  geom_ribbon(aes(ymin = q1, ymax = q5), fill = "lightblue") +
+  geom_line(aes(y = q50, color = "median"), size = 0.6) +
+  geom_line(aes(y = mean_r$mean, color = "mean"), size = 0.6) +
+  scale_x_continuous( breaks = scales::pretty_breaks(n=5)) + theme_light() +
   labs(x = "term (years)", y = "Euribor rate (%)") + scale_y_continuous(labels = scales::percent) +
-  theme(legend.position= "bottom", legend.title=element_blank(), plot.margin = margin(1.2,.5,1.2,.5, "cm"))
-
+  theme(legend.position= "bottom", legend.title=element_blank(),
+        legend.box = "vertical", plot.margin = margin(.5, .5, 1.2, .5, "cm")) +
+  scale_fill_manual(values = c("mistyrose1", "plum3", "lightblue")) +
+  scale_color_manual(values = c("darkred", "darkgreen"))
 
 #graph of quantiles through time unshaded #1
 ggplot(left_join(quantiles_2, mean_r), aes(x = term)) +
