@@ -282,32 +282,36 @@ legend("bottom", inset = c(-0.05,-0.45), legend = charac$option_matu, ncol = 6, 
 
 #Ggplot2 graph of RNDs with RND maturity on x axis
 x0 <- sapply(DNR_rev, function(x) ceiling(max(x)))  #the max of probability density value per RND
-x0 <- c(0, cumsum(head(x0, -1)))                    #new xaxis : cumulative max probability densities
-y0 <- c(0, head(charac$terms, -1))                  #RND's terms
+x0 <- c(0, cumsum(x0))                              #new xaxis : cumulative max probability densities
+y0 <- c(0, charac$terms)                            #RND's terms
 
 scale <- exp(diff(log(x0[-1])))/exp(diff(log(y0[-1])))
-z0 <- x0[2]*max(scale)
-z0 <- c(0, z0*c(1, cumprod(exp(diff(log(y0[-1]))))))
-path <- mapply(function(x, y, z) cbind(density = x + y, yield = z),  DNR_rev,  z0, yields)
+z0 <- y0*1.3*max(scale)*x0[4]/y0[4]
+
+print(exp(diff(log(z0[-1])))/exp(diff(log(y0[-1]))))      #check that DNR max values now proportional to terms
+print(cumsum(diff(z0))/cumsum(diff(y0)))
+
+#The value of each RND following the first are shifted by a constant to allow for a representation proportional to terms
+path <- mapply(function(x, y, z) cbind(density = x + y, yield = z),  DNR_rev,  cumsum(diff(z0)), yields)
 path <- lapply(path, data.frame)
+
+path_2 <- list()
+
+for (i in 1:length(path)){
+  path_2[[i]] <- cbind( rbind(path[[i]], 0), charac$terms[i])}
+
+path_2 <- lapply(path_2, setNames, nm =c("density", "yield", "maturity"))
 
 yield_min <- max(sapply(yields, function(x) min(x)))
 yield_max <- min(sapply(yields, function(x) max(x)))
 
 ggplot() +
-  geom_path(data = path[[1]], aes(density, yield)) + 
-  geom_path(data = path[[2]], aes(density, yield)) + 
-  geom_path(data = path[[3]], aes(density, yield)) + 
-  geom_path(data = path[[4]], aes(density, yield)) + 
-  geom_path(data = path[[5]], aes(density, yield)) + 
-  geom_path(data = path[[6]], aes(density, yield)) + 
-  geom_path(data = path[[7]], aes(density, yield)) + 
-  geom_path(data = path[[8]], aes(density, yield)) + 
-  geom_path(data = path[[9]], aes(density, yield)) + 
+  geom_path(data = do.call(rbind, path_2), aes(x = density, y = yield, colour = maturity)) +
   labs(x = "options' maturity (years)", y = 'Euribor 3 month values', title = "3-month Euribor RNDs") +
-  ylim(0.6*yield_min, 0.6*yield_max) +
-  scale_x_continuous(labels = function(x) round(x/300, 2) , breaks = scales::pretty_breaks(n = 5)) +
-  theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm"))
+  scale_x_continuous(labels = function(x) round(x/(max(z0)/max(y0)), 2) ,
+                     breaks = scales::pretty_breaks(n = 6), limits = c(0, 1.1*round(max(z0)))) +
+  scale_y_continuous(labels = scales::percent, limits = c(yield_min/10, 0.5*yield_max) )  +
+  theme(legend.position = "none", plot.margin = margin(.8,.5,.8,.5, "cm"))
 
 #Cumulative Density Function for any maturity for a sum of 2 or 3 lognormals
 sub_2 <- function(x, y){ x[3]*plnorm(y, meanlog = x[1], sdlog = x[2]) }
