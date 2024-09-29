@@ -19,7 +19,7 @@ last_mat <- options %>% mutate_if(is.character, as.numeric) %>% slice((last(char
 
 cex <- 0.8
 col <- c("lightblue","indianred")
-par(mar=c(6,4,4,4) + 0.1, xpd=T, cex.axis=cex)
+par(mar = c(6, 4, 4, 4) + 0.1, xpd = T, cex.axis = cex)
 plot(last_mat$call_strike, last_mat$call_price, xlim = range(c(last_mat$call_strike, last_mat$put_strike)),
      ylim = range( c(last_mat$call_price, last_mat$put_price) ), col=col[1], type="l", pch=20, xlab=" ",
      main = paste(last(charac$option_matu),"Euribor 3 mth option prices at all strikes, 05/31/2023",sep=" "),
