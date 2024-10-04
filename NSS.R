@@ -2,11 +2,9 @@
 ################################   WILLIAM ARRATA - NELSON SIEGEL SVENSSON MODEL  ################################
 
 require("pacman")
-pacman::p_load("nloptr","readxl","dplyr","tidyr", "ggplot2")
+pacman::p_load("nloptr", "readxl", "dplyr", "tidyr", "ggplot2")
 
-#########################     generating a series of parameters for the model     ############################
-
-#Influence of the different parameters on the shape of the curve:
+#########################            MATRIX OF PARAMETERS           ############################
 
 #The matrix of the 6 parameters
 coeff <- data.frame(matrix(c(0.02, -0.02, "", 0.06, "", 13), nrow = 4, ncol = 6, byrow = T, dimnames =
@@ -21,12 +19,13 @@ coeff_2 <- split(coeff_2, coeff_2$beta_3)
 coeff_3 <- coeff_3 %>% mutate(lambda_1 = c(0.2,0.5,1,2), beta_3 = 0.1) %>% mutate_all(as.numeric)
 coeff_3 <- split(coeff_3, coeff_3$lambda_1)
 
-############################################  NS MODEL ############################################
+####################################         NS MODEL        ######################################
 
 #the function describing the hump of the curve
 hump <- function(x, y) { x[,1]*((1-exp(-y/x[,2]))/(y/x[,2])-exp(-y/x[,2])) }
 
-NS_test <- function(x, y){
+#the NS function, with one hump
+NS <- function(x, y){
   curve <- x[,1] + x[,2]*(1-exp(-y/x[,4]))/(y/x[,4]) + hump(x[,3:4], y)
   return(curve)
 }
@@ -34,35 +33,42 @@ NS_test <- function(x, y){
 col <- rainbow(4)
 matu <- (1:240)/12
 
-NS_1 <- lapply(coeff_2, function(x) 100*NS_test(x[c(1:3,5)], matu))
+#The NS function with the 4 coefficients from coeff_2 with 4 possible values for beta_3
+NS_1 <- lapply(coeff_2, function(x) 100*NS(x[c(1:3,5)], matu))
 
-graph <- data.frame(lambda = rep(names(coeff_2), each = lengths(NS_1)), matu = rep(matu, 4), taux = unlist(NS_1))
+graph_ns <- data.frame(matu = rep(matu, length(NS_1)), taux = unlist(NS_1),
+                       lambda = rep(names(coeff_2), each = lengths(NS_1)))
 
-p <- ggplot(graph, aes(matu, taux, color = lambda)) + geom_line(size = 1) +  
+#Influence of beta_3 on the shape of the curve:
+p <- ggplot(graph_ns, aes(matu, taux, color = lambda)) + geom_line(size = 1) +  
   labs(x = "term (years)", y = "ytm (%)") + 
-  theme(legend.position = "bottom",plot.margin = margin(.8,.5,.8,.5, "cm")) +
+  theme(legend.position = "bottom", plot.margin = margin(.8,.5,.8,.5, "cm")) +
   guides(color = guide_legend(title = expression(beta[3]), title.hjust = 1.5))
 
-NS_2 <- lapply(coeff_3, function(x) 100*NS_test(x[c(1:3,5)], matu))
+#The NS function with the 4 coefficients from coeff_3 with 4 possible values for lambda_1
+NS_2 <- lapply(coeff_3, function(x) 100*NS(x[c(1:3,5)], matu))
 
-graph_2 <- data.frame(lambda = rep(names(coeff_3), each = lengths(NS_2)), matu = rep(matu, 4), taux = unlist(NS_2))
+#Influence of lambda_1 on the shape of the curve:
+graph_ns_2 <- data.frame(matu = rep(matu, length(NS_2)), taux = unlist(NS_2),
+                         lambda = rep(names(coeff_3), each = lengths(NS_2)))
 
 lab <- as.expression(bquote(lambda == .(as.numeric(names(lapply(coeff_2, function(x) grep("lambda_1", x)))))))
 lab <- parse(text = sprintf("lambda==%s", names(lapply(coeff_2, function(x) grep("lambda_1", x)))))
 
-ggplot(graph_2, aes(matu, taux, color = lambda)) + geom_line(size = 1) + labs(x = "term (years)", y = "ytm (%)") + 
+ggplot(graph_ns_2, aes(matu, taux, color = lambda)) + geom_line(size = 1) + labs(x = "term (years)", y = "ytm (%)") + 
   theme(legend.position = "none", plot.margin = margin(.8,.5,.8,.5, "cm")) +
   annotate(geom = 'text', x = 4.5, y = seq(2.25, 3.75, 0.5), label = lab, hjust = 0.025, 
            color = unique(sapply(ggplot_build(p)$data,'[[','colour')), vjust = -1, size = 4.5)
 
-############################################  NSS MODEL ############################################
+####################################          NSS MODEL         ###################################
 
-NSS_test <- function(x, y){
+#The NSS function, with two humps
+NSS <- function(x, y){
   curve <- x[,1] + x[,2]*(1-exp(-y/x[,5]))/(y/x[,5]) + hump(x[,c(3,5)], y)+ hump(x[,c(4,6)], y)
   return(curve)
 }
 
-NSS_1 <- 100*mapply(NSS_test, coeff_2, list(matu))
+NSS_1 <- 100*mapply(NSS, coeff_2, list(matu))
 NSS_1 <- split(t(NSS_1), 1: length(coeff_2))
 
 plot(NA, type="l", xlim = range(matu), ylim = range(NSS_1), xlab = "term (years)", ylab = "ytm (%)")
@@ -70,64 +76,63 @@ lapply(NS_1, function(x, t) lines(matu, x), t=t)
 text(x = matu[30], y = lapply(NSS_1, function(x) x[30]), pos = 1, col = col, cex = 1.5, 
      label = parse(text = sprintf("beta[3]==%s", names(lapply(coeff_2, function(x) grep("beta_3", x))))))
 
-NSS_2 <- lapply(coeff_3, function(x) 100*NSS_test(x, matu))
+NSS_2 <- lapply(coeff_3, function(x) 100*NSS(x, matu))
 
 plot(NA, type="l", xlim = range(matu), ylim = range(NSS_2), xlab="term (years)", ylab="ytm (%)")
 lapply(NS_2, function(x, t) lines(matu, x), t=t)
 text(x = matu[60], y = lapply(NSS_2, function(x) x[60]), pos = 1, col = col, cex = 1.5, 
      label = parse(text = sprintf("lambda[1]==%s", names(lapply(coeff_3, function(x) grep("lambda_1", x))))))
 
+
 ##########################   CORRELATION BETWEEN 2nd AND 3nd FACTOR LOADINGS   ###########################
+
 
 loading_1 <- function(x, y){ (1-exp(-y/x))/(y/x) }
 loading_2 <- function(x, y) { (loading_1(x ,y) - exp(-y/x)) }
 
-lambda <- seq(0.1, 15, 0.01)
+lambda <- seq(0.1, 15, 0.01)       #we create a series of possible values for lambda_1
 
-#values of 2nd and third factor loadings for all tested values of lambda_1
+matu_n <- head(matu, -60)             #a subset of maturities
+matu_n_2 <- head(matu, -100)          #an even smaller subset of maturities
+all_matu <- apply(mapply(paste0, apply(round(sapply(list(matu, matu_n, matu_n_2), range)), 2, as.list), "Y"),
+                  2, paste, collapse="-")
+
+#values of 2nd and third factor loadings for all tested values of lambda_1 and corresp correl
 slope_0 <- lapply(lambda, function(x) loading_1(x, matu))
 hump_0 <- lapply(lambda, function(x) loading_2(x, matu))
-
-#correlation between the two loadings for all tested values of lambda_1
 correl <- mapply(cor, slope_0, hump_0)
-correl <- data.frame(lambda = lambda, correlation = correl)
+correl <- data.frame(lambda = lambda, correlation = correl, matu = all_matu[1])
 
 #values of 2nd and third factor loadings for all tested values of lambda_1 for a smaller set of maturities
-matu_n <- head(matu, -60)
+#and corresponding correlations:
 slope_n <- lapply(lambda, function(x) loading_1(x, matu_n))
 hump_n <- lapply(lambda, function(x) loading_2(x, matu_n))
-
-#correlation between the two loadings for all tested values of lambda_1 for a smaller set of maturities
 correl_n <- mapply(cor, slope_n, hump_n)
-correl_n <- data.frame(lambda = lambda, correlation = correl_n)
+correl_n <- data.frame(lambda = lambda, correlation = correl_n, matu = all_matu[2])
 
 #values of 2nd and third factor loadings for all tested values of lambda_1 for an even smaller set of maturities
-matu_n_2 <- head(matu, -100)
+#and corresponding correlationq
 slope_n_2 <- lapply(lambda, function(x) loading_1(x, matu_n_2))
 hump_n_2 <- lapply(lambda, function(x) loading_2(x, matu_n_2))
-
-#correlation between the two loadings for all tested values of lambda_1 for an even smaller set of maturities
 correl_n_2 <- mapply(cor, slope_n_2, hump_n_2)
-correl_n_2 <- data.frame(lambda = lambda, correlation = correl_n_2)
+correl_n_2 <- data.frame(lambda = lambda, correlation = correl_n_2, matu = all_matu[3])
 
 #graph
-spec <- apply(mapply(paste0, apply(round(sapply(list(matu, matu_n, matu_n_2), range)), 2, as.list), "Y"),
-      2, paste, collapse="-")
-
+correl_all <- rbind(correl, correl_n, correl_n_2)
 ggplot() +
-  geom_point(data = correl, aes(lambda, correlation, color = spec[1]), size = 0.5) +
-  geom_point(data = correl_n, aes(lambda, correlation, color = spec[2]), size = 0.5) +
-  geom_point(data = correl_n_2, aes(lambda, correlation, color = spec[3]), size = 0.5) +
+  geom_point(data = correl_all, aes(lambda, correlation, color = matu), size = 0.5) +
   labs(y = "correlation between slope and curvature factors", x = expression(lambda[1])) +
   theme(legend.position = "bottom", plot.margin = margin(.5,.5,.5,.5, "cm")) + 
   guides(color = guide_legend(title = "maturity spectrum", title.position = "top", title.hjust = 0.5))
 
+
 ########################   NON LINEAR ESTIMATION PROCEDURE WITH RANDOM INITIAL VALUES    ###########################
+
 
 #I load the data
 data <- read_excel("French_bonds_06_10_2023.xlsx",1) %>% filter(!Series%in%c("OATe","OATi")) %>%
   select(c("Maturity","Ask Yield to Maturity")) %>% rename_all(~c("term","ytm")) %>% 
-  mutate(term = (as.Date(term, format= "%d/%m/%Y") - as.Date("2023-10-06"))/365) %>% 
+  mutate_at("term", ~(as.Date(., format= "%d/%m/%Y") - as.Date("2023-10-06"))/365) %>% 
   mutate(term = as.numeric(term), ytm = ytm/100) %>% filter(term <= 10)
 
 
@@ -148,17 +153,14 @@ GSS1 <- function(x, m, r){
   return(SSQ1)
 }
 
-#The six parameters are drawn randomly 500 times from predefined intervals
+#The six parameters are drawn randomly 10000 times from predefined intervals
 n_samp <- 10000
-g <- sample(0:600, n_samp, replace = T)/10000
-gg <- sample(-350:350, n_samp, replace = T)/10000
-a <- sample(-160:160, n_samp, replace = T)/100
-aa <- sample(-100:100, n_samp, replace = T)/1000
-b <- sample(330:630, n_samp, replace = T)/100
-bb <- sample(30:240, n_samp, replace = T)/100
-h <- cbind(g, gg, a, aa, b, bb)
+h <- do.call(cbind, lapply(list((0:600)/10000, (-350:350)/10000, (-160:160)/100, 
+                                (-100:100)/1000, (330:630)/100, (30:240)/100),
+                           sample, n_samp, replace = T))
 h[h==0] <- 1e-6
 
+#rearrange such that lower bound always inferior to upper bound
 lower <- 0.9*h
 upper <- 1.1*h
 replace <- upper<lower
@@ -198,7 +200,7 @@ e1 <- which.min(error)
 
 para_nls <- data.frame(matrix(unlist(para[e1]), nrow = 1, ncol = 6))
 colnames(para_nls) <- colnames(coeff)
-curve_nls <- data.frame(matu = data$term, rates = NSS_test(para_nls, data$term))
+curve_nls <- data.frame(matu = data$term, rates = NSS(para_nls, data$term))
 
 #graph
 ggplot() +
@@ -207,11 +209,13 @@ ggplot() +
   labs(y = "ytm (%)", x = "term (years)") + scale_y_continuous(labels = scales::percent) +
   theme(legend.position = "bottom", legend.title = element_blank(), plot.margin = margin(.8,.5,.8,.5, "cm"))
 
+
 #########################     NON LINEAR ESTIMATION PROCEDURE WITH GRID SEARCH    ########################
+
 
 # Determination of the initial values to start non linear optimization: first grid search
 
-#beta3, beta 4, lambda 1 and lambda 2 have to be found out so we first create a grid of parameters
+#We create a grid for the six parameters
 g <- seq(from = 0, to = 0.06, by = 0.01)
 gg <- seq(from = -0.035, to = 0.035, by = 0.01)
 a <- seq(from = -0.16, to = 0.16, by =0.04)
@@ -242,7 +246,7 @@ range_2 <- param_2$central + cbind(- range_2$max,  range_2$max)
 # Determination of the initial values to start non linear optimization: second grid search
 
 #Creation of a narrower set of values around best values obtained in the first grid search
-spread <- apply(range_2,1,diff)/(lengths(param)-1)
+spread <- apply(range_2, 1, diff)/(lengths(param) - 1)
 new_set <- mapply("*", apply(range_2/spread, 1, function(x) Reduce(seq, x)), as.list(spread))
 hh <- expand.grid(new_set)
 
@@ -279,8 +283,8 @@ for (i in 1:ncol(data[,-1])){
 e1 <- unlist(error)
 
 para_nlls <- data.frame(matrix(do.call(rbind, para_nlls), nrow = 1, ncol = 6))
-colnames(para_nls) <- colnames(coeff)
-curve_nlls <- data.frame(matu = data$term, rates = NSS_test(para_nlls, data$term))
+colnames(para_nlls) <- colnames(coeff)
+curve_nlls <- data.frame(matu = data$term, rates = NSS(para_nlls, data$term))
 
 #graph
 ggplot() +
@@ -290,12 +294,13 @@ ggplot() +
   theme(legend.position = "bottom", legend.title = element_blank(), plot.margin = margin(.8,.5,.8,.5, "cm"))
 
 
-################################  Linearizing the model - grid search OLS   ########################
+##########################          LINEARIZING THE MODEL : GRID SEARCH OLS        ###################
+
 
 #combinations of values of lambda_1 and lambda_2
 lambda_ols <- seq(1, 15, 0.01)
 lambda_ols <- expand.grid(lambda_ols, lambda_ols) %>% rename_with(~c("lambda_1", "lambda_2"))
-  
+
 #values of the different factor loadings for the different values of lambdas for each maturity
 load_2 <- lapply(lambda_ols$lambda_1, function(x) loading_1(x, data$term))
 load_3 <- lapply(lambda_ols$lambda_1, function(x) loading_2(x, data$term))
@@ -304,8 +309,8 @@ load_4 <- lapply(lambda_ols$lambda_2, function(x) loading_2(x, data$term))
 #Grid search based OLS
 RSS <- list()     #the RSS for each combination of lambdas in the linear model OLS estimate
 for (i in 1:nrow(lambda_ols)){
-    RSS[[i]] <- summary(lm(data$ytm ~ load_2[[i]] + load_3[[i]] + load_4[[i]]))$sigma
-  }
+  RSS[[i]] <- summary(lm(data$ytm ~ load_2[[i]] + load_3[[i]] + load_4[[i]]))$sigma
+}
 
 lambda_opt <- lambda_ols[which.min(RSS), ] #Index positioning of optimal lambda values
 
@@ -318,7 +323,7 @@ model <- lm(y ~ x_2 + x_3 + x_4, data = reg)
 #associated estimated beta parameters with lambda parameters
 para <- data.frame(matrix(c(summary(model)$coefficients[,1], unlist(lambda_opt)), nrow =1, ncol = 6))
 colnames(para) <- colnames(coeff)
-curve <- data.frame(matu = data$term, rates = NSS_test(para, data$term))
+curve <- data.frame(matu = data$term, rates = NSS(para, data$term))
 
 #graph
 ggplot() +
@@ -327,7 +332,9 @@ ggplot() +
   labs(y = "ytm (%)", x = "term (years)") + scale_y_continuous(labels = scales::percent) +
   theme(legend.position = "bottom", legend.title=element_blank(), plot.margin = margin(.8,.5,.8,.5, "cm"))
 
-################################   Linearizing the model - fixing the lambdas    ########################
+
+################            LINEARIZING THE MODEL: FIXING THE LAMBDAS             ####################
+
 
 #which values of lambda_1 generate a low correlation between the two factor loadings and will be tested
 lambda_target <- lambda[ abs(correl$correlation) < 0.8]
@@ -351,13 +358,13 @@ for (i in 1:nrow(lambda_fix)){
 lambda_fix_opt <- lambda_fix[which.min(RSS_fixed), ]
 
 reg_fix <- data.frame(y = data$ytm, x_2 = load_2[[which.min(RSS_fixed)]], x_3 = load_3[[which.min(RSS_fixed)]],
-                        x_4 = load_4[[which.min(RSS_fixed)]])
+                      x_4 = load_4[[which.min(RSS_fixed)]])
 
 model_fix <- lm ( y ~ ., data = reg_fix)
 
 para_fix <- data.frame(matrix(c(summary(model_fix)$coefficients[ ,1], unlist(lambda_fix_opt)), nrow = 1, ncol = 6))
 colnames(para_fix) <- colnames(coeff)
-curve_fix <- data.frame(matu = data$term, rates = NSS_test(para_fix, data$term))
+curve_fix <- data.frame(matu = data$term, rates = NSS(para_fix, data$term))
 
 #graph
 ggplot() +
