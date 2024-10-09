@@ -9,8 +9,8 @@ cppi <- read_excel("SXXE.xlsx") %>% rename_with(~c("Date", "price")) %>%   #Load
 #I define the parameters
 F <- 90                                                                #Floor
 m <- 4                                                                 #Multiplier
-chg <- which(cppi$Date=="2019-12-31")                                  #Date when riskfree rates changes
-r <- rep(c(2.75,2.25)/100,c(chg,nrow(cppi)-chg))                       #Discount rate timeseries
+chg <- which(cppi$Date == "2019-12-31")                                #Date when riskfree rates changes
+r <- rep( c(2.75,2.25)/100, c(chg, nrow(cppi) - chg))                  #Discount rate timeseries
 F1 <- 1.2                                                              #Additional Floors if cliquet
 F2 <- 1.1
 
@@ -19,34 +19,31 @@ F2 <- 1.1
 #DAILY REBALANCING, MAXIMUM EXPOSURE, NO CLIQUET 
 
 #Initialization
-backt <- as.data.frame(matrix(nrow=nrow(cppi),ncol=9,
-                           dimnames=list(c(),c("Date","n","Px","Vrisky","Vrf","Vpf","brebal","Cushion","Floor"))))
-backt$Date <- cppi$Date                                                          #Dates
-backt$Px <- cppi$price                                                           #Risky asset
-backt$Floor <- F*c(1,cumprod(1+as.numeric(r[-last(r)]*diff(backt$Date)/365)))    #Floor
-backt$Vpf[1] <- 100                                                              #CPPI value at inception
-backt$Cushion[1] <- (backt$Vpf-backt$Floor)[1]                                   #Cushion value at inception
-backt$Vrisky[1] <- m*backt$Cushion[1]                                            #Risky assets value at inception
-backt$Vrf[1] <- (backt$Vpf-backt$Vrisky)[1]                                      #Riskfree asset value at inception
-backt$n[1] <- (backt$Vrisky/backt$Px)[1]                                         #nb shares of risky asset at inception
+backt <- data.frame(Date = cppi$Date, n = NA, Px = cppi$price, Vrisky = NA, Vrf = NA, Vpf = 100, brebal = NA,
+                    Cushion = NA, Floor = F*c(1,cumprod(1 + as.numeric( r[-last(r)]*diff(cppi$Date)/365))))
+
+backt$Cushion[1] <- (backt$Vpf - backt$Floor)[1]               #Cushion value at inception
+backt$Vrisky[1] <- m*backt$Cushion[1]                          #Risky assets value at inception
+backt$Vrf[1] <- (backt$Vpf - backt$Vrisky)[1]                  #Riskfree asset value at inception
+backt$n[1] <- (backt$Vrisky/backt$Px)[1]                       #nb shares of risky asset at inception
 
 #Iteration
 for (i in 2:nrow(backt)){
   
-  #values before rebalancing
-  backt$brebal[i] <- backt$Px[i]*backt$n[i-1]                                                    #of risky assets
-  backt$Cushion[i] <- (backt$Vrf*(1+r*diff(backt$Date)/365))[i-1]+(backt$brebal-backt$Floor)[i]  #of cushion
+  #values of risky asset and cushion before rebalancing
+  backt$brebal[i] <- backt$Px[i]*backt$n[i-1]
+  backt$Cushion[i] <- (backt$Vrf*(1 + r*diff(backt$Date)/365))[i-1] + (backt$brebal - backt$Floor)[i]
   
   #rebalancing actions
   #1. If risky asset value above portfolio value, do nothing, riskfree asset interest accrues only
-  if(backt$Cushion[i]>backt$Floor[i]/(m-1)){
+  if(backt$Cushion[i] > backt$Floor[i]/(m-1) ){
       backt$Vrisky[i] <- backt$brebal[i]     
       backt$n[i] <- backt$n[i-1]
-      backt$Vrf[i] <- (backt$Vrf*(1 + r*diff(backt$Date)/365))[i-1]
+      backt$Vrf[i] <- (backt$Vrf*(1 + r*diff(backt$Date)/365) )[i-1]
       backt$Vpf[i] <- (backt$Vrisky + backt$Vrf)[i]
   }
   #2. Otherwise when cushion is positive
-  else if(backt$Cushion[i]>0){
+  else if(backt$Cushion[i] > 0){
       backt$Vrisky[i] <- m*backt$Cushion[i]
       backt$n[i] <- (backt$Vrisky/backt$Px)[i]
       backt$Vrf[i] <- (backt$Vrf*(1 + r*diff(backt$Date)/365))[i-1] + (backt$brebal - backt$Vrisky)[i]
@@ -88,17 +85,12 @@ simu_tot <- list()
 for (j in 1:length(S)){
 
 #Initialization
-  simu <- as.data.frame(matrix(nrow = length(S[[j]]), ncol = 9, dimnames =
-                   list( c(), c("Date","n","Px","Vrisky","Vrf","Vpf","brebal","Cushion","Floor"))))
-  simu$Date <- t                                                          #Dates
-  simu$Floor <- F*c(1, cumprod(1 + as.numeric(R*diff(simu$Date)/365)))       #Floor
-  simu$Vrisky[1] <- 40                                                    #Risky assets nominal value  at inception
-  simu$Vrf[1] <- 60                                                       #Riskfree asset nominal value at inception
-  simu$Vpf[1] <- (simu$Vrisky + simu$Vrf)[1]                                #Portfolio value at inception
-  simu$Cushion[1] <- (simu$Vpf - simu$Floor)[1]                             #Cushion value at inception
-  simu$Px <- S[[j]]                                                        #Risky asset
-  simu$n[1] <- (simu$Vrisky/simu$Px)[1]                                   #Nb shares of risky asset at inception
-  
+  simu <- data.frame(Date = t, n = NA, Px = S[[j]], Vrisky = 40, Vrf = 60, Vpf = NA, brebal = NA,
+                     Cushion = NA, Floor = F*c(1, cumprod(1 + as.numeric(R*diff(t)/365))))
+  simu$Vpf[1] <- (simu$Vrisky + simu$Vrf)[1]                #Portfolio value at inception
+  simu$Cushion[1] <- (simu$Vpf - simu$Floor)[1]             #Cushion value at inception
+  simu$n[1] <- (simu$Vrisky/simu$Px)[1]                     #Nb shares of risky asset at inception
+
   #Iteration
   for (i in 2:nrow(simu)){
     #values before rebalancing
@@ -107,7 +99,7 @@ for (j in 1:length(S)){
   
   #rebalancing actions
   #1. If risky asset value above portfolio value, do nothing, riskfree asset interest accrues only
-    if(simu$Cushion[i]>simu$Floor[i]/(m-1)){
+    if(simu$Cushion[i] > simu$Floor[i]/(m-1) ){
       simu$Vrisky[i] <- simu$brebal[i]     
       simu$n[i] <- simu$n[i-1]
       simu$Vrf[i] <- (simu$Vrf*(1 + R*diff(simu$Date)/365))[i-1]
@@ -115,7 +107,7 @@ for (j in 1:length(S)){
       }
   
   #2. Otherwise when cushion is positive
-    else if(simu$Cushion[i]>0){
+    else if(simu$Cushion[i] > 0){
       simu$Vrisky[i] <- m*simu$Cushion[i]
       simu$n[i] <- (simu$Vrisky/simu$Px)[i]
       simu$Vrf[i] <- (simu$Vrf*(1 + R*diff(simu$Date)/365))[i-1] + (simu$brebal - simu$Vrisky)[i]
