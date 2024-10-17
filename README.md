@@ -43,4 +43,4 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **TOPIC** | **SLIDES** | **CODE**|
 | :---        |     :---:      | :---:  |
 | **Calibration of Risk Neutral Densities** |   [RND_div_paying_short_version.pdf](https://github.com/user-attachments/files/17134157/RND_div_paying_short_version.pdf)| to come |
-| **Calibration of Nelson Siegel Svensson Model** |  [William Arrata NSS_new_2.pdf](https://github.com/user-attachments/files/17369135/William.Arrata.NSS_new_2.pdf) | to come |
+| **Calibration of Nelson Siegel Svensson Model** |  [NSS_short_version.pdf](https://github.com/user-attachments/files/17422884/NSS_short_version.pdf) | to come |
