@@ -34,8 +34,8 @@ https://blocnotesdeleco.banque-france.fr/sites/default/files/medias/documents/do
 | **Benchmark & Performance Attribution**  |   [Benchmarks_performance_attribution.pdf](https://github.com/user-attachments/files/17373696/Benchmarks_performance_attribution.pdf)| to come  | to come |  [FINM31261_exercises_20_to_22.pdf](https://github.com/user-attachments/files/17900254/FINM31261_exercises_20_to_22.pdf) | [FINM31261_exercises_20_to_22_corrections.pdf](https://github.com/user-attachments/files/17900257/FINM31261_exercises_20_to_22_corrections.pdf) | 
 | **Portfolio insurance techniques**     |   [CPPI_new_2.pdf](https://github.com/user-attachments/files/17867916/CPPI_new_2.pdf)  |  to come  | to come |   [FINM31261_exercises_23_24.pdf](https://github.com/user-attachments/files/17900265/FINM31261_exercises_23_24.pdf) |   [FINM31261_exercises_23_24_corrections.pdf](https://github.com/user-attachments/files/17900266/FINM31261_exercises_23_24_corrections.pdf) | 
 | **Style Investing**     |  [style_investing_new.pdf](https://github.com/user-attachments/files/17266547/style_investing_new.pdf) |  |  |  | 
-| **Exchange-Traded Funds part 1**     | [ETF_structuration.pdf](https://github.com/WilliamArrata/WilliamArrata/files/11141835/ETF_structuration.pdf)  |  |  |  | 
-| **Exchange-Traded Funds part 2**     |   [ETF_trading.pdf](https://github.com/user-attachments/files/16965813/ETF_trading.pdf)|   |    |     |
+| **Exchange-Traded Funds part 1**     |   [ETF_structuration.pdf](https://github.com/user-attachments/files/18128031/ETF_structuration.pdf) |  |  |  | 
+| **Exchange-Traded Funds part 2**     |   [ETF_trading.pdf](https://github.com/user-attachments/files/18128066/ETF_trading.pdf)  |   |    |     |
 
 ### **OTHER TOPICS IN QUANTITATIVE FINANCE**
 ***
